@@ -1,0 +1,17 @@
+FROM meltano/meltano:v3.8.0
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    git \
+    sed \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /project
+
+RUN curl --version && \
+    git --version && \
+    sed --version && \
+    meltano --version
+COPY macros /project
+
+CMD ["sleep", "infinity"]

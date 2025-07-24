@@ -1,0 +1,131 @@
+version: '3.8'
+services:
+  backend:
+    build: .
+    container_name: backend
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    ports:
+      - "8010:8010"
+    depends_on:
+      - postgres
+      - pgadmin
+      - postgres_source
+      - postgres_destination
+
+  frontend:
+    build: ./frontendreact
+    container_name: frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+      - pgadmin
+      - postgres_source
+      - postgres_destination
+      - backend
+
+  postgres_source:
+    image: postgres:16
+    container_name: postgres_source
+    environment:
+      POSTGRES_DB: mydatabase
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_source_data:/var/lib/postgresql/data
+      - ./source/init_database/init_source_database:/docker-entrypoint-initdb.d
+
+  postgres_destination:
+    image: postgres:16
+    container_name: postgres_destination
+    environment:
+      POSTGRES_DB: mydatabase
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_destination_data:/var/lib/postgresql/data
+
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    environment:
+      POSTGRES_DB: mydatabase
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./source/init_database/init_configuration_table:/docker-entrypoint-initdb.d
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+      - postgres_source
+      - postgres_destination
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+  n8n:
+    build:
+      context: ./source/pipeline_tools_docker_images/n8n_image
+      dockerfile: dockerfile
+    container_name: n8n
+    environment:
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - NODE_ENV=production
+      - N8N_RUNNERS_ENABLED=true
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false
+      - WEBHOOK_URL=http://localhost:5678/
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_DATABASE=mydatabase
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_USER=user
+      - DB_POSTGRESDB_PASSWORD=password
+      - DB_POSTGRESDB_SCHEMA=n8n_schema 
+    ports:
+      - "5678:5678"
+    volumes:
+      - ./n8n:/home/node/.n8n
+    depends_on:
+      - postgres
+
+  superset:
+    build: ./source/pipeline_tools_docker_images/superset_image
+    container_name: superset
+    ports:
+      - "8088:8088"
+    environment:
+      SUPERSET_ENV: production
+      SUPERSET_DATABASE_URI: postgresql+psycopg2://user:password@postgres:5432/mydatabase?options=-csearch_path%3Dsuperset_schema
+      SUPERSET_SECRET_KEY: "aZ1x9vqfK2w+G+dwiXm16BnyhsJXgsmwuIiLNqKDRI/8x7axAscKc7Dg"
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: admin123
+      ADMIN_EMAIL: admin@example.com
+      ADMIN_FIRSTNAME: Admin
+      ADMIN_LASTNAME: User
+    depends_on:
+      - postgres
+    volumes:
+      - superset_home:/app/superset
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+  postgres_source_data:
+  postgres_destination_data:
+  superset_home:
