@@ -1,0 +1,496 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sql-transformation",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -2100,
+        -160
+      ],
+      "id": "99e25d84-3088-4d77-9a98-0eb05600e087",
+      "name": "Webhook Entry",
+      "webhookId": "3d070e8c-a6fe-4991-bd49-bcc8a94880cb"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "transformation",
+              "name": "transformation",
+              "value": "={{ $json.body.transformation}}",
+              "type": "string"
+            },
+            {
+              "id": "tool",
+              "name": "tool",
+              "value": "={{ $json.body.tool }}",
+              "type": "string"
+            },
+            {
+              "id": "schema_name",
+              "name": "schema_name",
+              "value": "={{ $json.body.schema_name }}",
+              "type": "string"
+            },
+            {
+              "id": "db_host",
+              "name": "db_host",
+              "value": "={{ $json.body.db_host }}",
+              "type": "string"
+            },
+            {
+              "id": "db_port",
+              "name": "db_port",
+              "value": "={{ $json.body.db_port || 5432 }}",
+              "type": "number"
+            },
+            {
+              "id": "db_name",
+              "name": "db_name",
+              "value": "={{ $json.body.db_name }}",
+              "type": "string"
+            },
+            {
+              "id": "db_user",
+              "name": "db_user",
+              "value": "={{ $json.body.db_user }}",
+              "type": "string"
+            },
+            {
+              "id": "db_password",
+              "name": "db_password",
+              "value": "={{ $json.body.db_password }}",
+              "type": "string"
+            },
+            {
+              "id": "db_ssl",
+              "name": "db_ssl",
+              "value": "={{ $json.body.db_ssl || false }}",
+              "type": "boolean"
+            },
+            {
+              "id": "step",
+              "name": "step",
+              "value": "1_webhook_input",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "147d5c3f-6a97-4acd-b3a5-d18d97b6c196",
+      "name": "Step 1: Capture Input",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        -1880,
+        -160
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n    t.table_schema,\n    t.table_name,\n    c.column_name,\n    c.data_type,\n    c.is_nullable,\n    c.column_default\nFROM \n    information_schema.tables t\nJOIN \n    information_schema.columns c ON t.table_name = c.table_name AND t.table_schema = c.table_schema\nWHERE \n    t.table_type = 'BASE TABLE'\n    AND t.table_schema = '{{ $('Step 1: Capture Input').first().json.schema_name }}'\nORDER BY \n    t.table_name, c.ordinal_position;",
+        "options": {}
+      },
+      "id": "934206e1-06c0-4616-b6a6-0f4bb4520219",
+      "name": "Step 2: Get Database Schema",
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        -1660,
+        -160
+      ],
+      "typeVersion": 2.5,
+      "credentials": {
+        "postgres": {
+          "id": "yEgRstjVhn0hqPPA",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate all schema items into a single item\nconst allSchemaData = [];\n\nfor (const item of $input.all()) {\n  allSchemaData.push(item.json);\n}\n\nreturn {\n  schema_info: JSON.stringify(allSchemaData),\n  target_schema: $('Step 1: Capture Input').first().json.schema_name,\n  step: '2_database_schema'\n};"
+      },
+      "id": "eca380ba-44b5-4895-a2bc-74e173879f69",
+      "name": "Step 2: Capture Schema",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -1440,
+        -170
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze this transformation request with the available database schema:\n\nTransformation Request: {{ $('Step 1: Capture Input').first().json.transformation }}\nAvailable Database Schema (from {{ $json.target_schema }} schema only):\n{{ $json.schema_info }}\n\nAnalyze the request and provide me if we could create the transformation based on the actual available tables and columns in the specified schema. ",
+        "options": {
+          "systemMessage": "Schema-Aware Transformation Request Analyzer\nYou are an expert database schema validator. You will receive a database schema and a transformation request. Your task is to determine if the requested transformation is possible with the provided schema.\nInput Format\nYou will receive:\nDatabase Schema: Complete table structures with columns, data types, and relationships\nTransformation Request: Detailed description of the desired data transformation\nValidation Process\nStep 1: Schema Element Verification\nVerify all referenced tables exist in the schema\nConfirm all required columns exist in their respective tables\nCheck column data types match transformation requirements\nValidate foreign key relationships for joins\nStep 2: Transformation Feasibility Analysis\nAssess if the requested business logic can be implemented\nCheck if required calculations are possible with available data\nVerify aggregation requirements can be met\nConfirm filtering conditions are achievable\nStep 3: Data Type Compatibility Check\nEnsure data types support required operations\nVerify join compatibility between tables\nCheck for potential data conversion issues\nValidate calculation compatibility\n\nValidation Rules\nSet \"valid\": false if ANY of these conditions exist:\nRequired tables are missing from the schema\nEssential columns don't exist in specified tables\nData types are incompatible with requested operations\nBusiness logic cannot be implemented with available data\nAggregation requirements exceed available granularity\nCritical filtering conditions reference non-existent fields\nCalculation dependencies are missing\nSet \"valid\": true if ALL of these conditions are met:\nAll referenced tables exist in the schema\nAll required columns are present with compatible data types\nTable relationships support the requested joins\nBusiness logic can be fully implemented\nAll calculations are feasible with available data\nFiltering and aggregation requirements can be satisfied\nData transformations are technically possible\nOutput Format\nReturn ONLY a JSON object with this exact structure:\njson\n{\n  \"valid\": \"true or false\",\n  \"missing_tables\": [\"table1\", \"table2\"],\n  \"missing_columns\": [\"table.column1\", \"table.column2\"],\n  \"incompatible_types\": [\"column: required_type vs actual_type\"],\n  \"issues\": [\"Brief description of any blocking issues\"]\n}\nImportant:\nIf valid is \"true\", all other fields should be empty arrays\nIf valid is \"false\", provide specific details in the relevant arrays\nKeep issue descriptions concise and actionable\nFocus on blocking issues, not optimization suggestions\nAnalyze the transformation request against the schema and return your validation result.\n"
+        }
+      },
+      "id": "4a565e52-e1d8-4419-8036-0d15e760e007",
+      "name": "Step 3: Schema-Aware Analysis",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        -1220,
+        -170
+      ],
+      "typeVersion": 1.7
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "step3_result",
+              "name": "step3_result",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            },
+            {
+              "id": "step",
+              "name": "step",
+              "value": "3_transformation_analysis",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "a2551bfd-41a6-4702-84e4-f6c0f7e85d61",
+      "name": "Step 3: Capture Analysis",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        -844,
+        -170
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "generated_query",
+              "name": "generated_query",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            },
+            {
+              "id": "step",
+              "name": "step",
+              "value": "5_query_generation",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "0900843d-230c-49cb-8d8a-166103099cc8",
+      "name": "Step 5: Capture Generated Query",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        -28,
+        -320
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {\"result\": $('Step 5: Capture Generated Query').item.json.generated_query, \"status\": \"Sucess\"} }}",
+        "options": {}
+      },
+      "id": "4c3a47b7-1acb-4f2f-b7d3-b2c60f03d183",
+      "name": "Return Valid Query",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        192,
+        -320
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "612fa3b1-0e08-47f3-9455-746568546ab6",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "leftValue": "={{ $('Step 3: Capture Analysis').first().json.step3_result }}",
+                    "rightValue": "\"valid\": \"true\""
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Valid"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "8c844924-b2ed-48b0-935c-c66a8fd0c778",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "leftValue": "={{ $('Step 3: Capture Analysis').first().json.step3_result }}",
+                    "rightValue": "\"valid\": \"false\""
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Non valid"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d02d5ebd-7086-479c-b064-f4e1ecf61c5a",
+      "name": "valid or non valid",
+      "type": "n8n-nodes-base.switch",
+      "position": [
+        -624,
+        -170
+      ],
+      "typeVersion": 3.2
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {\"error\": \"Transformation request doesn't align with schema: \"} }}",
+        "options": {}
+      },
+      "id": "cb79e194-2369-4a62-9e40-faeced64ee56",
+      "name": "Return Schema Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        -326,
+        -20
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-2.0-flash-001",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -1140,
+        60
+      ],
+      "id": "b7a0f832-a31c-4016-9aa2-7c1894097a59",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "h0ax4vG0eqRy4LXJ",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-2.0-flash-001",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        -200
+      ],
+      "id": "176335d1-cf50-4328-a24a-e52b3c0e4be1",
+      "name": "OpenRouter Chat Model1",
+      "credentials": {
+        "openRouterApi": {
+          "id": "h0ax4vG0eqRy4LXJ",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Generate a sql query for this transformation:\n\nAnalyzed Transformation: {{ $('Step 1: Capture Input').first().json.transformation}}\nTarget Schema: {{ $('Step 2: Capture Schema').first().json.target_schema }}\nDatabase Schema ({{ $('Step 2: Capture Schema').first().json.target_schema }} only): {{ $('Step 2: Capture Schema').first().json.schema_info }}\n\nEnsure all table and column names exist in the provided schema and follow sql best practices.",
+        "options": {
+          "systemMessage": "# SQL Transformation Generator\nYou are a SQL transformation specialist. You will receive a data transformation request and generate the corresponding SQL query to perform that transformation.\n\n## Requirements\n\n### Transformation Requirements\n- Analyze the requested transformation logic\n- Implement the exact business rules specified\n- Handle data type conversions as needed\n- Apply appropriate filters, aggregations, and calculations\n- Ensure transformation preserves data integrity\n- Perform JOINs between tables when relationships exist and are needed\n\n### Schema Compliance\n- Use ONLY tables and columns that exist in the provided schema\n- Always reference tables with proper schema qualification when needed\n- Validate all column references against the schema\n- Respect data types and constraints\n- Identify and use existing foreign key relationships for JOINs\n\n### SQL Query Structure\n- Write standard SQL that works across major databases\n- Use appropriate materializations (CREATE TABLE, CREATE VIEW, etc.)\n- Include proper commenting for complex logic\n- Use standard SQL functions and operations\n- Implement proper CTEs for complex logic\n- Apply appropriate JOIN types (INNER, LEFT, RIGHT, FULL OUTER) based on requirements\n\n### SQL Quality Standards\n- Write clean, readable SQL with proper formatting\n- Use appropriate JOINs and WHERE clauses\n- Implement proper aggregations and window functions when needed\n- Follow SQL best practices for performance\n- Include proper CTEs for complex logic\n- Use standard SQL functions and syntax\n- Ensure JOIN conditions are logically sound and use proper keys\n\n### Output Format\n- Return ONLY the complete SQL query\n- No explanations, comments, or additional text\n- Ensure the query is immediately executable\n- Use standard SQL syntax compatible with major databases\n\n### Error Prevention\n- Verify all table and column references exist in schema\n- Check for proper data type compatibility\n- Ensure JOIN conditions are logically sound\n- Validate aggregation logic and GROUP BY clauses\n- Use proper table referencing syntax\n- Verify JOIN keys exist and have compatible data types\n\n## Example Structure\n```sql\nWITH source_data AS (\n    SELECT\n        t1.column1,\n        t1.column2,\n        t2.column3,\n        t2.column4\n    FROM schema_name.table1 t1\n    INNER JOIN schema_name.table2 t2 \n        ON t1.foreign_key = t2.primary_key\n    WHERE t1.condition = 'value'\n),\ntransformed_data AS (\n    SELECT\n        column1,\n        column2,\n        aggregation_function(column3) AS calculated_field\n    FROM source_data\n    GROUP BY column1, column2\n)\nSELECT * FROM transformed_data;\n```\n\nGenerate the SQL query that performs the specified transformation using the provided schema, including JOINs where relationships exist and are needed for the transformation."
+        }
+      },
+      "id": "8e4d359f-8252-4cb2-bc11-5c41e4c10e22",
+      "name": "Step 5b: SQL Generator",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        -400,
+        -420
+      ],
+      "typeVersion": 1.7
+    }
+  ],
+  "connections": {
+    "Webhook Entry": {
+      "main": [
+        [
+          {
+            "node": "Step 1: Capture Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 1: Capture Input": {
+      "main": [
+        [
+          {
+            "node": "Step 2: Get Database Schema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 2: Get Database Schema": {
+      "main": [
+        [
+          {
+            "node": "Step 2: Capture Schema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 2: Capture Schema": {
+      "main": [
+        [
+          {
+            "node": "Step 3: Schema-Aware Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 3: Schema-Aware Analysis": {
+      "main": [
+        [
+          {
+            "node": "Step 3: Capture Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 3: Capture Analysis": {
+      "main": [
+        [
+          {
+            "node": "valid or non valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 5: Capture Generated Query": {
+      "main": [
+        [
+          {
+            "node": "Return Valid Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "valid or non valid": {
+      "main": [
+        [
+          {
+            "node": "Step 5b: SQL Generator",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Schema Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Step 3: Schema-Aware Analysis",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Step 5b: SQL Generator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 5b: SQL Generator": {
+      "main": [
+        [
+          {
+            "node": "Step 5: Capture Generated Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "337939c8f03856a151e3f2d0c9f9bbc74f4a4659f671f71f93e97b747b3a2ec5"
+  }
+}

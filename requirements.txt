@@ -1,0 +1,14 @@
+fastapi==0.115.12
+uvicorn[standard]
+sqlalchemy ==2.0.40
+psycopg2-binary==2.9.10
+python-dotenv ==1.1.0
+pydantic ==2.11.4
+pydantic-settings==2.9.1
+pydantic[email]
+bcrypt ==4.3.0
+passlib ==1.7.4
+requests == 2.32.3
+docker == 7.1.0
+python-jose == 3.4.0
+sqlfluff == 3.4.1
