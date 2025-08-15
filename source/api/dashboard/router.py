@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from source.service.dashboard.service import DashboardService
 from source.service.user_pipeline_access.service import UserPipelineAccessService
-from source.config.config import settings
+from source.config.config import APIConfig
 
-dashboard_router = APIRouter(prefix=f"{settings.base_url}/dashboard", tags=["Dashboard"])
+dashboard_router = APIRouter(prefix=f"{APIConfig.api_prefix}/dashboard", tags=["Dashboard"])
 
 @dashboard_router.get("/")
 def get_dashboard_data(

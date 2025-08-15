@@ -9,10 +9,10 @@ from source.schema.user_pipeline_acess.schema import (
 )
 from source.service.user_pipeline_access.service import UserPipelineAccessService
 from source.exceptions.exceptions import UserNotFoundError, PipelineNotFoundError
-from source.config.config import settings
+from source.config.config import APIConfig
 
 user_pipeline_access_router = APIRouter(
-    prefix=f"{settings.api_prefix}/user-pipeline-access"
+    prefix=f"{APIConfig.api_prefix}/user-pipeline-access"
 )
 @user_pipeline_access_router.put("/update", response_model=UserPipelineAccessResponse)
 def update_access(

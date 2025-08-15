@@ -162,8 +162,11 @@ class SupersetClient:
         
         if response.status_code == 201:
             result = response.json()
-            # Try both possible keys for id
-            return result.get('id') or result.get('result', {}).get('id')
+            user_id = result.get('id') or (result.get('result', {}).get('id') if isinstance(result.get('result'), dict) else None)
+            if user_id is not None:
+                return user_id
+            else:
+                raise KeyError("User creation succeeded (201), but no 'id' or 'result.id' found in response: {}".format(result))
         else:
             return None
     

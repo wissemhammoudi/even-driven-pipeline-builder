@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends
 from source.schema.pipeline_run.schema import PipelineRunCreate
 from source.service.pipeline_run.service import PipelineRunService
-from source.config.config import settings
-pipeline_run_router = APIRouter(prefix=f"{settings.api_prefix}/pipeline-runs")
+from source.config.config import APIConfig
+pipeline_run_router = APIRouter(prefix=f"{APIConfig.api_prefix}/pipeline-runs")
 
 
 @pipeline_run_router.get("/pipeline/{pipeline_id}")

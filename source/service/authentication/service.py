@@ -30,12 +30,12 @@ class AuthService:
     def create_access_token(self, user: User) -> str:
         data = {
             "sub": user.email,
-            "username": user.username,
             "user_id": user.user_id,
             "role": user.role,
-            "email": user.email,
-            "first_name": user.first_name,
-            "last_name": user.last_name
+            "email":user.email,
+            "first_name":user.first_name,
+            "_last_name":user.last_name
+            
         }
         expire = datetime.utcnow() + timedelta(minutes=self.token_expiry_minutes)
         data.update({"exp": expire})
@@ -50,10 +50,9 @@ class AuthService:
         try:
             payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
             email: str = payload.get("sub")
-            username: str = payload.get("username") 
             if email is None:
                 raise credentials_exception
-            token_data = TokenData(email=email, username=username)
+            token_data = TokenData(email=email)
         except JWTError:
             raise credentials_exception
 

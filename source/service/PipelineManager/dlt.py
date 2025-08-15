@@ -33,13 +33,15 @@ class DltRunner(BaseStepRunner):
             secrets_content = []
             secrets_content.append(f'[sources.{step_config["source"]}.credentials]')
             for key, value in step_config["connection_config"]["source"].items():
+                config_key = "username" if key == "user" else key
                 escaped_value = str(value).replace('"', '\\"')
-                secrets_content.append(f'{key} = "{escaped_value}"')
+                secrets_content.append(f'{config_key} = "{escaped_value}"')
 
             secrets_content.append(f'\n[destination.{step_config["destination"]}.credentials]')
             for key, value in step_config["connection_config"]["destination"].items():
+                config_key = "username" if key == "user" else key
                 escaped_value = str(value).replace('"', '\\"')
-                secrets_content.append(f'{key} = "{escaped_value}"')
+                secrets_content.append(f'{config_key} = "{escaped_value}"')
 
             secrets_str = "\n".join(secrets_content)
             

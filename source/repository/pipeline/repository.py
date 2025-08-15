@@ -1,6 +1,7 @@
 from typing import List, Optional
 from source.models.user.models import User
 from source.models.pipeline.models import Pipeline
+from source.models.user_pipeline_access.model import UserPipelineAccess
 from source.repository.database import get_db
 from sqlalchemy import func
 database= get_db()
@@ -9,18 +10,34 @@ class PipelineRepository:
     def __init__(self):
         self.db = database
 
-    def get_all_pipelines(self, offset: int = 0, limit: int = 10, deprecated: bool = False, name: str = None, created_date=None) -> List[Pipeline]:
-        query = self.db.query(Pipeline).filter(Pipeline.is_deleted == False)
+    def get_paginated_pipelines(self, offset: int = 0, limit: int = 10, deprecated: bool = False, name: str = None, created_date=None, user_id: Optional[int] = None):
+        if user_id is not None:
+            query = self.db.query(Pipeline).join(
+                UserPipelineAccess, 
+                Pipeline.pipeline_id == UserPipelineAccess.pipeline_id
+            ).filter(
+                Pipeline.is_deleted == False,
+                UserPipelineAccess.user_id == user_id
+            )
+        else:
+            query = self.db.query(Pipeline).filter(Pipeline.is_deleted == False)
+        
         if deprecated is not None:
             query = query.filter(Pipeline.is_deprecated == deprecated)
         if name:
             query = query.filter(Pipeline.name.ilike(f"%{name}%"))
         if created_date:
             query = query.filter(func.date(Pipeline.created_at) == created_date)
-        return query.offset(offset*limit).limit(limit).all()
+        
+        total_count = query.count()  
+        pipelines = query.offset(offset).limit(limit).all()
+        
+        return pipelines, total_count
+    
     def get_all_pipelines_ids(self) -> List[int]:
         pipelines = self.db.query(Pipeline).filter(Pipeline.is_deleted == False)
         return [pipeline.pipeline_id for pipeline in pipelines]
+    
     def get_active_pipeline_by_user_id(self,user_id: int) -> List[Pipeline]:
         return self.db.query(Pipeline).filter(
             Pipeline.created_by == user_id,
@@ -32,8 +49,10 @@ class PipelineRepository:
             Pipeline.pipeline_id == pipeline_id,
             Pipeline.is_deleted == False
             ).first()
+    
     def get_pipline_by_id(self,pipeline_id:int):
         return self.db.query(Pipeline).filter(Pipeline.pipeline_id==pipeline_id,Pipeline.is_deleted == False).first()
+    
     def create_Pipeline(self,pipeline: Pipeline):
         try:
             self.db.add(pipeline)

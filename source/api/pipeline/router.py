@@ -9,9 +9,6 @@ from sqlalchemy.exc import IntegrityError
 from source.schema.pipeline.schema import PostgreSQLMetadataRequest
 from source.service.PipelineManager.sourceTablesMetadata import PostgreSQLSourceMetadata  
 from datetime import datetime
-from source.service.change_detection.schema_listener_manager import SchemaListenerManager
-
-pipeline_router = APIRouter(prefix=f"{APIConfig.api_prefix}/pipeline")
 from source.service.user.services import UserService
 from source.schema.user.schemas import UserRole 
 pipeline_router = APIRouter(prefix=f"{APIConfig.api_prefix}/pipeline")
@@ -78,7 +75,6 @@ def create_pipeline(
     pipeline_data: PipelineCreate, 
     pipeline_service: PipelineService = Depends(PipelineService),
     UserService: UserService = Depends(UserService),
-    SchemaListenerManager: SchemaListenerManager = Depends(SchemaListenerManager)
 
 ):
     try:
@@ -88,7 +84,6 @@ def create_pipeline(
 
         response, status_code = pipeline_service.create_pipeline(pipeline_data)
         if status_code == 201:
-            SchemaListenerManager.start_listener(response['pipeline_id'])
             return response
         else:
             raise HTTPException(
@@ -118,10 +113,9 @@ def create_pipeline(
         )
 
 @pipeline_router.delete("/{pipeline_id}", response_model=dict)
-def delete_pipeline(pipeline_id: int, PipelineService: PipelineService = Depends(PipelineService), SchemaListenerManager: SchemaListenerManager = Depends(SchemaListenerManager)):
+def delete_pipeline(pipeline_id: int, PipelineService: PipelineService = Depends(PipelineService)):
     try:
         PipelineService.delete_pipeline(PipelineDelete(pipeline_id=pipeline_id))
-        SchemaListenerManager.stop_listener(pipeline_id)
         return {"message": "Pipeline soft-deleted successfully."}
     except PipelineNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

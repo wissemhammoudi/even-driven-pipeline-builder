@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, status, HTTPException
 from source.schema.pipeline_step.schema import StepCreate,StepUpdate
 from source.service.pipeline_step.service import StepService
 from source.exceptions.exceptions import StepNotFoundError
-from source.config.config import settings
+from source.config.config import APIConfig
 
-step_router = APIRouter(prefix=f"{settings.api_prefix}/steps")
+step_router = APIRouter(prefix=f"{APIConfig.api_prefix}/steps")
 
 @step_router.post("/", status_code=status.HTTP_201_CREATED)
 def create_step(

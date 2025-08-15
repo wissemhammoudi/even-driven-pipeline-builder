@@ -6,7 +6,6 @@ from source.service.pipeline_step.service import StepService
 from source.service.pipeline.service import PipelineService
 import datetime
 from source.repository.database import get_db
-from source.schema.pipeline.schema import PipelineStatusEnum
 
 database = get_db()
 
@@ -30,15 +29,6 @@ class PipelineRunService:
         error_message = None
         
         try:
-            pipeline_data = self.pipline_service.get_pipline_by_id(run.pipeline_id)
-            if not pipeline_data:
-                error_message = "Pipeline not found"
-                raise ValueError(error_message)
-            
-            if pipeline_data.status == PipelineStatusEnum.broken:
-                error_message = "Cannot start pipeline: Pipeline is marked as broken due to schema changes"
-                raise ValueError(error_message)
-            
             steps_data = self.step_service.get_steps_by_pipeline(run.pipeline_id)
             if not steps_data:
                 error_message = "No steps found for this pipeline"
@@ -49,6 +39,7 @@ class PipelineRunService:
                 created_by=run.user_id,
                 pipeline_run="RUNNING"  
             ))
+            pipeline_data=self.pipline_service.get_pipline_by_id(run.pipeline_id)
             for step in steps_data:
                 stepconfig = step.step_config
                 if stepconfig:

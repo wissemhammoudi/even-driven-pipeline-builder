@@ -37,12 +37,12 @@ class TransformationFrameworkHandler(ABC):
         full_content = self.create_model_file_content(model_name, sql_content)
         
         directory = '/'.join(model_path.split('/')[:-1])
-        self.runner.docker_manager.exec_command(
+        self.runner.exec_command(
             command=["sh", "-c", f"mkdir -p {directory}"],
             workdir=self.workdir
         )        
         escaped_content = full_content.replace('"', '\\"').replace("`", "\\`").replace("$", "\\$")
-        self.runner.docker_manager.exec_command(
+        self.runner.exec_command(
             command=["sh", "-c", f"printf '%s\\n' \"{escaped_content}\" > {model_path}"],
             workdir=self.workdir
         ) 

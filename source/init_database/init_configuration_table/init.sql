@@ -4,17 +4,16 @@ CREATE TABLE IF NOT EXISTS configurations (
     tool VARCHAR(255) NOT NULL,
     plugin_type VARCHAR(255) NOT NULL,
     plugin_name VARCHAR(255) NOT NULL,
-    schema_change_tool VARCHAR(255) DEFAULT NULL,
     is_deprecated BOOLEAN NOT NULL DEFAULT FALSE,
     config JSONB
 );
-INSERT INTO configurations (type, tool, plugin_type, plugin_name, schema_change_tool, is_deprecated, config)
+INSERT INTO configurations (type, tool, plugin_type, plugin_name, is_deprecated, config)
 VALUES 
-('data ingestion', 'meltano', 'loader', 'target-mongodb', 'mongodb', FALSE, '{
+('data ingestion', 'meltano', 'loader', 'target-mongodb', FALSE, '{
     "connection_string": "mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@mongodb0.example.com:PORT",
     "db_name": "Name of the target db inside your mongoDB"
 }'),
-('data ingestion', 'dlt', 'source', 'sql_database', 'postgres', FALSE, '{
+('data ingestion', 'dlt', 'source', 'sql_database', FALSE, '{
     "drivername": "Database driver, e.g., postgresql+psycopg2",
     "database": "Name of the source database",
     "password": "Password to connect to the source database",
@@ -22,14 +21,14 @@ VALUES
     "host": "Hostname or IP of the source database",
     "port": "Port number for the source database"
 }'),
-('data ingestion', 'dlt', 'destination', 'postgres', 'postgres', FALSE, '{
+('data ingestion', 'dlt', 'destination', 'postgres', FALSE, '{
     "database": "Name of the destination database",
     "password": "Password to connect to the destination database",
     "username": "Username for authentication",
     "host": "Hostname or IP of the destination database",
     "port": "Port number for the destination database"
 }'),
-('data ingestion', 'meltano', 'loader', 'target-postgres', 'postgres', FALSE, '{
+('data ingestion', 'meltano', 'loader', 'target-postgres', FALSE, '{
     "database": "Database name.",
     "host": "Hostname for postgres instance.",
     "password": "Password used to authenticate.",
@@ -38,7 +37,7 @@ VALUES
     "sqlalchemy_url": "sqlalchemy url",
     "default_target_schema": "Postgres schema to send data to"
 }'),
-('data ingestion', 'meltano', 'extractor', 'tap-postgres', 'postgres', FALSE, '{
+('data ingestion', 'meltano', 'extractor', 'tap-postgres', FALSE, '{
     "database": "Database name. Note if sqlalchemy_url is set this will be ignored.",
     "filter_schemas": "If an array of schema names is provided, the tap will only process the specified Postgres schemas and ignore others. If left blank, the tap automatically determines ALL available Postgres schemas.",
     "host": "Hostname for postgres instance. Note if sqlalchemy_url is set this will be ignored.",
@@ -47,7 +46,7 @@ VALUES
     "user": "User name used to authenticate.",
     "sqlalchemy_url": "sqlalchemy url"
 }'),
-('data ingestion', 'meltano', 'extractor', 'tap-mongodb', 'mongodb', FALSE, '{
+('data ingestion', 'meltano', 'extractor', 'tap-mongodb', FALSE, '{
     "database_excludes": "A list of databases to exclude. If this list is empty, no databases will be excluded.",
     "database_includes": "A list of databases to include. If this list is empty, all databases will be included.",
     "infer_schema_max_docs": "The maximum number of documents to sample when inferring the schema. This is only used when infer_schema is true.",
@@ -57,7 +56,7 @@ VALUES
     "strategy": "The strategy to use for schema resolution. Defaults to ''raw''. The ''raw'' strategy uses a relaxed schema using additionalProperties: true to accept the document as-is leaving the target to respect it. Useful for blob or jsonl. The ''envelope'' strategy will envelope the document under a key named document. The target should use a variant type for this key. The ''infer'' strategy will infer the schema from the data based on a configurable number of documents.",
     "stream_prefix": "Optionally add a prefix for all streams, useful if ingesting from multiple shards/clusters via independent tap-mongodb configs. This is applied during catalog generation. Regenerate the catalog to apply a new stream prefix."
 }'),
-('data transformation', 'meltano', 'utility', 'dbt-postgres', NULL, FALSE, '{
+('data transformation', 'meltano', 'utility', 'dbt-postgres', FALSE, '{
     "dbname": "The db to connect to.",
     "host": "The postgres host to connect to.",
     "password": "The password to connect with.",
@@ -74,13 +73,13 @@ VALUES
             "median": ["integer", "bigint", "smallint", "numeric", "real", "double precision"]
         },
         "string_transform": {
-            "upper": ["varchar", "text", "char"],
-            "lower": ["varchar", "text", "char"]
+            "upper": ["varchar", "text", "character","character varying"],
+            "lower": ["varchar", "text", "character","character varying"]
         },
         "date_transform": {
-            "extract_year": ["date", "timestamp"],
-            "extract_month": ["date", "timestamp"],
-            "extract_day": ["date", "timestamp"]
+            "extract_year": ["date", "timestamp","datetime","timestamp without time zone"],
+            "extract_month": ["date", "timestamp","datetime","timestamp without time zone"],
+            "extract_day": ["date", "timestamp","datetime","timestamp without time zone"]
         },
         "lookup_join": {
             "left_join": ["column"],
@@ -91,7 +90,7 @@ VALUES
         }
     }]
 }'),
-('data transformation', 'sqlmesh', 'utility', 'postgres', NULL, FALSE, '{
+('data transformation', 'sqlmesh', 'utility', 'postgres', FALSE, '{
     "database": "The db to connect to.",
     "host": "The postgres host to connect to.",
     "password": "The password to connect with.",
@@ -108,13 +107,13 @@ VALUES
             "median": ["integer", "bigint", "smallint", "numeric", "real", "double precision"]
         },
         "string_transform": {
-            "upper": ["varchar", "text", "char"],
-            "lower": ["varchar", "text", "char"]
+            "upper": ["varchar", "text", "character","character varying"],
+            "lower": ["varchar", "text", "character","character varying"]
         },
         "date_transform": {
-            "extract_year": ["date", "timestamp"],
-            "extract_month": ["date", "timestamp"],
-            "extract_day": ["date", "timestamp"]
+            "extract_year": ["date", "timestamp","datetime","timestamp without time zone"],
+            "extract_month": ["date", "timestamp","datetime","timestamp without time zone"],
+            "extract_day": ["date", "timestamp","datetime","timestamp without time zone"]
         },
         "lookup_join": {
             "left_join": ["column"],
@@ -125,6 +124,6 @@ VALUES
         }
     }]
 }'),
-('data visualization', 'superset', 'utility', 'superset:postgres', NULL, FALSE, '{
+('data visualization', 'superset', 'utility', 'superset:postgres', FALSE, '{
     "SQLALCHEMY_DATABASE_URI": "Superset metadata database connection string."
 }');

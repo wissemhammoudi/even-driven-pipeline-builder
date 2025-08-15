@@ -21,8 +21,8 @@ class UserResponse(BaseModel):
     user_id: int
     username: str
     email: str
-    first_name: str
-    last_name: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     role: Optional[str]
 
 class PasswordUpdate(BaseModel):

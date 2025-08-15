@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import List
 from source.schema.step_config.schema import Step_Config
 from source.service.step_config.service import configurationService
-from source.config.config import settings
+from source.config.config import APIConfig
 
-step_config_router = APIRouter(prefix=f"{settings.api_prefix}/stepConfig")
+step_config_router = APIRouter(prefix=f"{APIConfig.api_prefix}/stepConfig")
 
 @step_config_router.get("/", response_model=List[Step_Config])
 def get_step_config(configurationService: configurationService = Depends(configurationService)):

@@ -13,8 +13,10 @@ from source.api.agentic_transformation.router import router_transformation
 from source.api.user_pipeline_access.router import user_pipeline_access_router
 from source.api.dashboard.router import dashboard_router
 from source.api.pipeline_dashboard.router import pipeline_dashboard_router
-from source.api.change_detection.router import schema_change_detection_router
-from source.service.change_detection.schema_listener_manager import SchemaListenerManager
+from source.service.user.services import UserService
+from source.service.PipelineManager.transfomrationManager.n8n_manager import N8NManager
+
+
 app = FastAPI(
     title='Data Integration Component',
     description='A RESTful API for Pipeline Manager Component',
@@ -43,15 +45,23 @@ app.include_router(router_transformation, tags=["transformation"])
 app.include_router(user_pipeline_access_router, tags=["User Pipeline Access"])
 app.include_router(dashboard_router, tags=["Dashboard"])
 app.include_router(pipeline_dashboard_router, tags=["Pipeline Dashboard"])
-app.include_router(schema_change_detection_router, tags=["Schema Change Detection"])
 Base.metadata.create_all(bind=engine)
 
 
-@app.on_event("startup")
-def on_startup():
-    manager = SchemaListenerManager()
-    manager.restore_all_listeners()
 
+
+@app.on_event("startup")
+async def startup_event():
+    """Run startup tasks"""
+    print("Starting up...")
+    
+    user_service = UserService()
+    user_service.create_initial_users()
+    
+    n8n_manager = N8NManager()
+    n8n_manager.initialize_n8n()
+    
+    print("Startup completed!")
 
 @app.get("/")
 def root():

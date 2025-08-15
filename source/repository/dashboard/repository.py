@@ -76,7 +76,7 @@ class DashboardRepository:
                     "pipeline_id": p.pipeline_id,
                     "name": p.name,
                     "description": p.description,
-                    "status": p.status,
+                    "status": "Active" if not p.is_deprecated else "Deprecated",
                     "created_at": p.created_at.isoformat() if p.created_at else None,
                     "created_by": p.created_by,
                     "username": p.owner.username if p.owner else None,

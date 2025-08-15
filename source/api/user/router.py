@@ -3,9 +3,9 @@ from typing import List
 from source.schema.user.schemas import UserCreate, UserResponse, UserUpdate, PasswordUpdate, LoginSchema
 from source.service.user.services import UserService
 from source.exceptions.exceptions import UserNotFoundError, DuplicateUserError, InvalidPasswordError
-from source.config.config import settings
+from source.config.config import APIConfig
 
-user_router = APIRouter(prefix=f"{settings.api_prefix}/users")
+user_router = APIRouter(prefix=f"{APIConfig.api_prefix}/users")
 
 @user_router.post('/signup', status_code=status.HTTP_201_CREATED)
 def signup(user_data: UserCreate,user_service: UserService = Depends(UserService)):

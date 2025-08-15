@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List
 from source.models.pipeline.models import Pipeline
-from source.schema.pipeline.schema import PipelineCreate, PipelineDelete, StepAdd, StepDelete, PipelineUpdate, PipelineResponse,PipelineStatusEnum
+from source.schema.pipeline.schema import PipelineCreate, PipelineDelete, StepAdd, StepDelete, PipelineUpdate, PipelineResponse, StepTypeEnum
 from source.repository.pipeline.repository import PipelineRepository
 from source.service.pipeline_step.service import StepService
 from source.service.step_configuration_association.service import StepConfigurationAssociationService
@@ -64,8 +64,7 @@ class PipelineService:
                 name=pipeline_data.name,
                 description=pipeline_data.description,
                 created_by=pipeline_data.created_by,
-                created_at=datetime.utcnow(),
-                status=PipelineStatusEnum.stopped,
+                created_at=datetime.utcnow()
             )
         pipeline_id = self.pipeline_repository.create_Pipeline(pipeline)
         Pipeline_init = PipelineManager()
@@ -93,16 +92,23 @@ class PipelineService:
                         )
                     self.StepConfigurationAssociation.add_association(config_association)
             
+            has_visualization_step = any(
+                step_data.step_config.get("config_type") == StepTypeEnum.DATA_VISUALIZATION 
+                for step_data in pipeline_data.step_list
+            )
+            
             for step_data in pipeline_data.step_list:
                 github_repo_name = f"{pipeline_data.name}_{pipeline_id}_{step_data.order}"
                 print(f"Processing step with repo: {github_repo_name}")
                 runner = Pipeline_init.get_runner(str(step_data.step_config["tool"]))
                 
-                is_visual = step_data.step_config.get("config_type") == "data visualization"
+                is_visual = step_data.step_config.get("config_type") == StepTypeEnum.DATA_VISUALIZATION
                 Pipeline_init.add_step(github_repo_name, runner, step_data, is_visual)
             
-            dashboard_id=Pipeline_init.create_pipeline()
-            self.dashboard_pipeline_association.create_association(pipeline_id, dashboard_id)
+            dashboard_id = Pipeline_init.create_pipeline()          
+            if has_visualization_step and dashboard_id:
+                self.dashboard_pipeline_association.create_association(pipeline_id, dashboard_id)
+            
             return {"message": "Pipeline created successfully", "pipeline_id": pipeline_id}, 201
             
         except Exception as e:

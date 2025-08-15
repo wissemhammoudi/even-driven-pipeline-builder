@@ -8,5 +8,7 @@ ENV NODE_ENV=production
 RUN mkdir -p /home/node/.n8n
 
 WORKDIR /home/node
+COPY ./n8nTemplate/transformationegent.json /home/node/workflows/transformationegent.json
+COPY ./n8nTemplate/credentials.json /home/node/credentials/credentials.json
 
 EXPOSE 5678

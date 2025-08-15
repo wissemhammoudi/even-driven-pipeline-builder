@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends, status
 from source.service.pipeline_dashboard.service import PipelineDashboardService
-from source.config.config import settings
+from source.config.config import APIConfig
 
-pipeline_dashboard_router = APIRouter(prefix=f"{settings.base_url}/pipeline-dashboard")
+pipeline_dashboard_router = APIRouter(prefix=f"{APIConfig.api_prefix}/pipeline-dashboard")
 
 @pipeline_dashboard_router.get("/pipeline/{pipeline_id}/analytics")
 def get_pipeline_analytics(

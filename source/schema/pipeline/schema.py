@@ -26,13 +26,29 @@ class StepDelete(BaseModel):
     pipeline_id: int
     step_id: int 
 
+class PipelineResponse(BaseModel):
+    pipeline_id: int
+    name: str
+    description: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    is_deleted: bool
+    is_deprecated: bool
+    created_by: int
+    
+    class Config:
+        from_attributes = True
+
+    
 class ToolEnum(str, Enum):
     MELTANO = "meltano"
     DLT ="dlt"
     SQLMESH ="sqlmesh"
     DBT="dbt"
     SUPERSET="superset"
-
+class DatabaseConfigurationEnum(str, Enum):
+    database="database"
+    dbname="dbname"
 class StepTypeEnum(str, Enum):
     DATA_INGESTION = "data ingestion"
     DATA_TRANSFORMATION="data transformation"
@@ -50,16 +66,3 @@ class PostgreSQLMetadataRequest(BaseModel):
     password: str
     port: Optional[int] = 5432
     schema: str
-class PipelineStatusEnum(Enum):
-    running = "running"
-    stopped = "stopped"
-    broken = "broken"
-
-class PipelineResponse(BaseModel):
-    pipeline_id: int
-    name: str
-    description: Optional[str] = None
-    created_by: int
-    status: Optional[str] = None
-    created_at: Optional[datetime] = None
-    step_list: List[StepBase] = []

@@ -4,7 +4,7 @@ from source.config.config import APIConfig,SupersetConfig
 from source.schema.superset.schema import VisualizationControl
 from source.service.user.services import UserService
 
-superset_router = APIRouter(prefix=f"{settings.api_prefix}/superset")
+superset_router = APIRouter(prefix=f"{APIConfig.api_prefix}/superset")
 
 
 @superset_router.post("/visualization/start")
@@ -24,7 +24,7 @@ def start_visualization(
             raise HTTPException(status_code=404, detail="No steps found for this pipeline")
         return {
                 "status": "started",
-                "visualization_url": f"{settings.superset_url}",
+                "visualization_url": f"{SupersetConfig.superset_user_url}",
                 "username": username,
                 "password": password,
             }

@@ -1,13 +1,9 @@
-
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Enum as SqlEnum
-import enum
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey
 from sqlalchemy.schema import Identity
 from source.repository.database import Base
 from sqlalchemy.orm import relationship
 from source.models.user_pipeline_access.model import UserPipelineAccess
-from source.schema.pipeline.schema import PipelineStatusEnum
-
 
 class Pipeline(Base):
     __tablename__ = "pipelines"
@@ -20,7 +16,6 @@ class Pipeline(Base):
     is_deleted = Column(Boolean, default=False, nullable=False)
     is_deprecated = Column(Boolean, default=False, nullable=False)
     created_by = Column(Integer, ForeignKey('users.user_id'), nullable=False)
-    status = Column(SqlEnum(PipelineStatusEnum), default=PipelineStatusEnum.stopped, nullable=False)
 
     owner = relationship("User", back_populates="pipelines")
     steps = relationship("Step", back_populates="pipeline")

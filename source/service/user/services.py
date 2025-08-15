@@ -3,7 +3,7 @@ from source.models.user.models import User
 from source.repository.user.repository import UserRepository
 from source.exceptions.exceptions import UserNotFoundError, DuplicateUserError, InvalidPasswordError
 from source.service.authentication.service import AuthService  
-from source.config.config import AuthConfig,SupersetConfig
+from source.config.config import AuthConfig, SupersetConfig, ApplicationUserInitConfig
 from source.service.PipelineManager.supersetclient import SupersetClient
 from source.service.user_superset_account_association.service import UserSupersetAccountAssociationService
 from source.schema.user.schemas import UserRole
@@ -111,3 +111,93 @@ class UserService:
 
         access_token = self.auth_service.create_access_token(user)
         return {"access_token": access_token, "token_type": "bearer"}
+
+    def create_initial_users(self):
+        """Create admin and regular user if they don't exist"""
+        users_created = []
+        
+        try:
+            admin_user = self.user_repository.get_user_by_username(ApplicationUserInitConfig.admin_username)
+            if not admin_user:
+                admin_user = User(
+                    username=ApplicationUserInitConfig.admin_username,
+                    email=ApplicationUserInitConfig.admin_email,
+                    first_name=ApplicationUserInitConfig.admin_username,
+                    last_name=ApplicationUserInitConfig.admin_username,
+                    password_hash=self.auth_service.hash_password(ApplicationUserInitConfig.admin_password),
+                    role=ApplicationUserInitConfig.admin_role
+                )
+                self.user_repository.create_user(admin_user)
+                
+                superset_roles = [SupersetConfig.superset_admin_role_id]
+                superset_user_id = self.superset_client.create_user(
+                    username=ApplicationUserInitConfig.admin_username,
+                    email=ApplicationUserInitConfig.admin_email,
+                    first_name="Admin",
+                    last_name="User",
+                    password=ApplicationUserInitConfig.admin_username,  
+                    roles=superset_roles,
+                    active=True
+                )
+                
+                if superset_user_id:
+                    self.user_superset_account_association_service.add_association(
+                        user_id=admin_user.user_id, 
+                        superset_user_id=superset_user_id
+                    )
+                    print(f"Superset account created for admin user '{ApplicationUserInitConfig.admin_username}'")
+                else:
+                    print(f"Warning: Failed to create Superset account for admin user '{ApplicationUserInitConfig.admin_username}'")
+                
+                users_created.append(ApplicationUserInitConfig.admin_username)
+                print(f"Admin user '{ApplicationUserInitConfig.admin_username}' created")
+            else:
+                print(f"Admin user '{ApplicationUserInitConfig.admin_username}' already exists, skipping...")
+            
+            regular_user = self.user_repository.get_user_by_username(ApplicationUserInitConfig.user_username)
+            if not regular_user:
+                regular_user = User(
+                    username=ApplicationUserInitConfig.user_username,
+                    email=ApplicationUserInitConfig.user_email,
+                    first_name=ApplicationUserInitConfig.user_username,
+                    last_name=ApplicationUserInitConfig.user_username,
+                    password_hash=self.auth_service.hash_password(ApplicationUserInitConfig.user_password),
+                    role=ApplicationUserInitConfig.user_role
+                )
+                self.user_repository.create_user(regular_user)
+                
+                superset_roles = [SupersetConfig.superset_gamma_role_id]
+                superset_user_id = self.superset_client.create_user(
+                    username=ApplicationUserInitConfig.user_username,
+                    email=ApplicationUserInitConfig.user_email,
+                    first_name="Regular",
+                    last_name="User",
+                    password=ApplicationUserInitConfig.user_username,  
+                    roles=superset_roles,
+                    active=True
+                )
+                
+                if superset_user_id:
+                    self.user_superset_account_association_service.add_association(
+                        user_id=regular_user.user_id, 
+                        superset_user_id=superset_user_id
+                    )
+                    print(f"Superset account created for regular user '{ApplicationUserInitConfig.user_username}'")
+                else:
+                    print(f"Warning: Failed to create Superset account for regular user '{ApplicationUserInitConfig.user_username}'")
+                
+                users_created.append(ApplicationUserInitConfig.user_username)
+                print(f"Regular user '{ApplicationUserInitConfig.user_username}' created")
+            else:
+                print(f"Regular user '{ApplicationUserInitConfig.user_username}' already exists, skipping...")
+            
+            if users_created:
+                print(f"Successfully created {len(users_created)} user(s): {', '.join(users_created)}")
+            else:
+                print("No new users were created - all users already exist")
+                
+            return users_created
+            
+        except Exception as e:
+            print(f"Error creating initial users: {str(e)}")
+            raise

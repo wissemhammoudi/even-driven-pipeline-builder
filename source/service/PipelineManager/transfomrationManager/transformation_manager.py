@@ -93,8 +93,8 @@ class TransformationManager:
             if not raw_sql:
                 continue
             
-            cleaned_sql = self._sanitize_and_validate_agentic_sql(raw_sql, framework)
-            model_name = self._create_model_name_from_transformation_intent(agentic_config.get("intent", ""), transformation_index)
+            cleaned_sql = self._sanitize_agentic_sql(raw_sql, framework)
+            model_name = agentic_config.get("model_name", f"agentic_model_{transformation_index}")
             framework_handler.write_model_file(model_name, cleaned_sql, "agentic")
 
     def _standardize_table_sync_configuration(self, config: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -195,10 +195,7 @@ class TransformationManager:
             sql_code = sql_code.rstrip(';')
         return sql_code
 
-    def _create_model_name_from_transformation_intent(self, intent: str, transformation_index: int) -> str:
-        """Generates a sanitized model name from an intent string."""
-        if not intent:
-            return f"agentic_transformation_{transformation_index + 1}"
+
         
         words = re.findall(r'\b\w{MIN_WORD_LENGTH,}\b', intent.lower())
         key_words = [word for word in words if word not in ['that', 'this', 'with', 'from', 'into']]
@@ -234,7 +231,7 @@ class TransformationManager:
             }
             yaml_content = yaml.dump(sources_dict, indent=2, sort_keys=False)
             escaped_yaml = yaml_content.replace("'", "'\"'\"'")
-            framework_handler.runner.docker_manager.exec_command(
+            framework_handler.runner.exec_command(
                command=["sh", "-c", f"echo '{escaped_yaml}' > {framework_handler.workdir}/transform/models/sources/sources.yml"],
                workdir=framework_handler.workdir
             ) 

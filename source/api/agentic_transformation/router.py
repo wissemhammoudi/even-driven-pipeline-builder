@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException
 from source.service.PipelineManager.transformationAgent import send_transformation_request
 from source.schema.agentic_transformation.schema import TransformationRequest
-from source.config.config import settings
-router_transformation = APIRouter(prefix=f"/api/{settings.version}/transformation")
+from source.config.config import APIConfig
+router_transformation = APIRouter(prefix=f"{APIConfig.api_prefix}/transformation")
 
 
 @router_transformation.post("/create-transformation")

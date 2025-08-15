@@ -2,10 +2,10 @@ from fastapi import APIRouter, Depends
 from typing import List
 from source.schema.step_stepconfi_association.schema import StepConfigurationAssociationCreate 
 from source.service.step_configuration_association.service import StepConfigurationAssociationService
-from source.config.config import settings
+from source.config.config import APIConfig
 
 configuration_router = APIRouter(
-    prefix=f"{settings.api_prefix}/step-config-associations"
+    prefix=f"{APIConfig.api_prefix}/step-config-associations"
 )
 
 @configuration_router.post("/", response_model=StepConfigurationAssociationCreate)
