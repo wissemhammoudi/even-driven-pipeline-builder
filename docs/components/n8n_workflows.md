@@ -44,7 +44,7 @@ Some steps in the workflow interact with GROQ services via OpenRouter. For this,
 
 - **API Key (example, safe for internal use):**
   ```
-  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
+  ddfdf
   ```
 - In n8n, go to **Credentials** and add a new credential for OpenRouter or set it as an environment variable if required by your node.
 
