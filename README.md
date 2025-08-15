@@ -122,12 +122,12 @@ The platform consists of several interconnected services:
 
 ## Documentation
 
-### **📚 Comprehensive Documentation**
+### ** Comprehensive Documentation**
 - **[Documentation Index](docs/README.md)** - Complete project documentation organized by service and component
 - **[API Reference](docs/components/api.md)** - Complete API endpoint documentation
 - **[Configuration Guide](docs/components/configuration.md)** - Environment setup and configuration
 
-### **🔧 Service Documentation**
+### ** Service Documentation**
 
 #### **Core Services**
 - **API Service** - [Complete API Reference](docs/components/api.md)
