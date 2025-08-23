@@ -15,7 +15,7 @@ class Pipeline(Base):
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now, nullable=False)
     is_deleted = Column(Boolean, default=False, nullable=False)
     is_deprecated = Column(Boolean, default=False, nullable=False)
-    created_by = Column(Integer, ForeignKey('users.user_id'), nullable=False)
+    created_by = Column(String(36), ForeignKey('users.user_id'), nullable=False) 
 
     owner = relationship("User", back_populates="pipelines")
     steps = relationship("Step", back_populates="pipeline")

@@ -10,6 +10,15 @@ class UserAPI {
     }
   }
 
+  async getCurrentUser () {
+    try {
+      const response = await userApiFunctions.getCurrentUser()
+      return response.data
+    } catch (error) {
+      throw handleApiError(error)
+    }
+  }
+
   async updateProfile (profileData) {
     try {
       const response = await userApiFunctions.updateProfile(profileData)
@@ -31,6 +40,15 @@ class UserAPI {
   async getUsers () {
     try {
       const response = await userApiFunctions.getUsers()
+      return response.data
+    } catch (error) {
+      throw handleApiError(error)
+    }
+  }
+
+  async getUserByUsername (username) {
+    try {
+      const response = await userApiFunctions.getUserByUsername(username)
       return response.data
     } catch (error) {
       throw handleApiError(error)

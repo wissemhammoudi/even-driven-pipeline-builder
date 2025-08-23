@@ -6,12 +6,12 @@ class UserSupersetAccountAssociationRepository:
     def __init__(self):
         self.db: Session = get_db()
 
-    def add_association(self, user_id: int, superset_user_id: int) -> UserSupersetAccountAssociation:
+    def add_association(self, user_id: str, superset_user_id: int) -> UserSupersetAccountAssociation:
         association = UserSupersetAccountAssociation(user_id=user_id, superset_user_id=superset_user_id)
         self.db.add(association)
         self.db.commit()
         self.db.refresh(association)
         return association
 
-    def get_by_user_id(self, user_id: int):
+    def get_by_user_id(self, user_id: str):
         return self.db.query(UserSupersetAccountAssociation).filter_by(user_id=user_id).all() 

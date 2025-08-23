@@ -2,6 +2,23 @@ from pydantic import BaseModel, Field
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 
+class PipelineDashboardCreate(BaseModel):
+    pipeline_id: int
+    dashboard_config: Dict[str, Any]
+
+class PipelineDashboardUpdate(BaseModel):
+    dashboard_config: Optional[Dict[str, Any]] = None
+
+class PipelineDashboardResponse(BaseModel):
+    id: int
+    pipeline_id: int
+    dashboard_config: Dict[str, Any]
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
 class DurationDistributionResponse(BaseModel):
     duration_range: str
     success_count: int

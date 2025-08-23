@@ -1,14 +1,14 @@
 from pydantic import BaseModel
 from typing import List, Optional, Any
 from datetime import datetime
-from source.schema.pipeline_step.schema import StepBase,StepCreate
+from source.schema.pipeline_step.schema import StepBase,PipelineStepCreate
 from enum import Enum
 
 
 class PipelineCreate(BaseModel):
     name: str
     description: Optional[str] = None
-    created_by: int
+    created_by: str
     step_list:List[StepBase]
 
 class PipelineDelete(BaseModel):
@@ -21,7 +21,7 @@ class PipelineUpdate(BaseModel):
 
 class StepAdd(BaseModel):
     pipeline_id: int
-    step: StepCreate
+    step: PipelineStepCreate
 class StepDelete(BaseModel):
     pipeline_id: int
     step_id: int 
@@ -34,7 +34,7 @@ class PipelineResponse(BaseModel):
     updated_at: datetime
     is_deleted: bool
     is_deprecated: bool
-    created_by: int
+    created_by: str  
     
     class Config:
         from_attributes = True

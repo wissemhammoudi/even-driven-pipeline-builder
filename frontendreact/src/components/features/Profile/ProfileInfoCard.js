@@ -19,6 +19,17 @@ const ProfileInfoCard = ({ user, updateUser }) => {
     last_name: user?.last_name || ''
   })
 
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        username: user.username || '',
+        email: user.email || '',
+        first_name: user.first_name || '',
+        last_name: user.last_name || ''
+      })
+    }
+  }, [user])
+
   const [errors, setErrors] = useState({})
 
   useEffect(() => {
@@ -85,22 +96,41 @@ const ProfileInfoCard = ({ user, updateUser }) => {
       const response = await userAPI.updateProfile(updateData)
 
       if (response && (response.message || response.detail)) {
-        const updatedUser = {
-          ...user,
-          username: formData.username,
-          email: formData.email,
-          first_name: formData.first_name,
-          last_name: formData.last_name
+        try {
+          const updatedUserResponse = await userAPI.getUserByUsername(formData.username)
+          if (updatedUserResponse) {
+            const updatedUser = updatedUserResponse
+            
+            localStorage.setItem('user', JSON.stringify(updatedUser))
+
+            if (updateUser) {
+              updateUser(updatedUser)
+            }
+
+            toast.success('Profile updated successfully!')
+            setShowEditInfo(false)
+          } else {
+            toast.error('Failed to fetch updated profile data')
+          }
+        } catch (fetchError) {
+          console.error('Failed to fetch updated user data:', fetchError)
+          const updatedUser = {
+            ...user,
+            username: formData.username,
+            email: formData.email,
+            first_name: formData.first_name,
+            last_name: formData.last_name
+          }
+
+          localStorage.setItem('user', JSON.stringify(updatedUser))
+
+          if (updateUser) {
+            updateUser(updatedUser)
+          }
+
+          toast.success('Profile updated successfully!')
+          setShowEditInfo(false)
         }
-
-        localStorage.setItem('user', JSON.stringify(updatedUser))
-
-        if (updateUser) {
-          updateUser(updatedUser)
-        }
-
-        toast.success('Profile updated successfully!')
-        setShowEditInfo(false)
       } else {
         toast.error('Unexpected response from server')
       }

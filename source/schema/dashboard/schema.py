@@ -14,7 +14,7 @@ class RecentRun(BaseModel):
     created_at: Optional[str]
     started_at: Optional[str]
     completed_at: Optional[str]
-    created_by: int
+    created_by: str 
 
 class RecentPipeline(BaseModel):
     pipeline_id: int
@@ -22,7 +22,7 @@ class RecentPipeline(BaseModel):
     description: Optional[str]
     status: str
     created_at: Optional[str]
-    created_by: int
+    created_by: str
     step_count: int
 
 class DailyRunStats(BaseModel):

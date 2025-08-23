@@ -2,7 +2,7 @@ from source.schema.pipeline_run.schema import PipelineRunCreate
 from source.models.pipeline_run.model import PipelineRun
 from source.repository.pipeline_run.repository import PipelineRunRepository
 from source.service.PipelineManager.pipelineManager import PipelineManager
-from source.service.pipeline_step.service import StepService
+from source.service.pipeline_step.service import PipelineStepService
 from source.service.pipeline.service import PipelineService
 import datetime
 from source.repository.database import get_db
@@ -13,7 +13,7 @@ class PipelineRunService:
     def __init__(self):
         self.db = database
         self.repo = PipelineRunRepository()
-        self.step_service = StepService()
+        self.step_service = PipelineStepService()
         self.pipline_service=PipelineService()
         
     def get_pipeline_runs_by_pipeline_id(self,pipeline_id):

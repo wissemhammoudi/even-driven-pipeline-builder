@@ -3,7 +3,7 @@ from source.models.user_pipeline_access.model import UserPipelineAccess
 from source.models.user.models import User
 from source.models.pipeline.models import Pipeline
 from source.repository.database import get_db
-from source.schema.user_pipeline_acess.schema import GrantType
+from source.schema.user_pipeline_access.schema import GrantType
 
 database = get_db()
 
@@ -21,7 +21,7 @@ class UserPipelineAccessRepository:
             self.db.rollback()
             raise e
 
-    def get_access_by_user_and_pipeline(self, user_id: int, pipeline_id: int) -> Optional[UserPipelineAccess]:
+    def get_access_by_user_and_pipeline(self, user_id: str, pipeline_id: int) -> Optional[UserPipelineAccess]:
         return self.db.query(UserPipelineAccess).filter(
             UserPipelineAccess.user_id == user_id,
             UserPipelineAccess.pipeline_id == pipeline_id
@@ -32,7 +32,7 @@ class UserPipelineAccessRepository:
             UserPipelineAccess.pipeline_id == pipeline_id
         ).all()
 
-    def update_access(self, user_id: int, pipeline_id: int, grant_type: GrantType, granted_by: int) -> Optional[UserPipelineAccess]:
+    def update_access(self, user_id: str, pipeline_id: int, grant_type: GrantType, granted_by: str) -> Optional[UserPipelineAccess]:
         try:
             access = self.get_access_by_user_and_pipeline(user_id, pipeline_id)
             if access:
@@ -46,7 +46,7 @@ class UserPipelineAccessRepository:
             self.db.rollback()
             raise e
 
-    def delete_access(self, user_id: int, pipeline_id: int) -> bool:
+    def delete_access(self, user_id: str, pipeline_id: int) -> bool:
         try:
             access = self.get_access_by_user_and_pipeline(user_id, pipeline_id)
             if access:
@@ -58,7 +58,7 @@ class UserPipelineAccessRepository:
             self.db.rollback()
             raise e
 
-    def get_pipelines_for_user(self, user_id: int) -> List[Pipeline]:
+    def get_pipelines_for_user(self, user_id: str) -> List[Pipeline]:
         return self.db.query(Pipeline).join(UserPipelineAccess).filter(
             UserPipelineAccess.user_id == user_id,
             Pipeline.is_deleted == False

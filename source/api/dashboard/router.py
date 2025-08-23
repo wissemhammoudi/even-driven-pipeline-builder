@@ -1,15 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from source.service.dashboard.service import DashboardService
 from source.service.user_pipeline_access.service import UserPipelineAccessService
-from source.config.config import APIConfig
+from source.config.config import api_config
+from source.service.authentication.keycloak_auth import require_user_role
 
-dashboard_router = APIRouter(prefix=f"{APIConfig.api_prefix}/dashboard", tags=["Dashboard"])
+dashboard_router = APIRouter(prefix=f"{api_config.api_prefix}/dashboard", tags=["Dashboard"])
 
 @dashboard_router.get("/")
 def get_dashboard_data(
-    user_id: int,
+    user_id: str, 
     dashboard_service: DashboardService = Depends(DashboardService),
-    user_pipeline_access_service: UserPipelineAccessService = Depends(UserPipelineAccessService)
+    user_pipeline_access_service: UserPipelineAccessService = Depends(UserPipelineAccessService),
+    current_user: dict = Depends(require_user_role)
 ):
     try:
         if not user_id:
@@ -30,10 +32,11 @@ def get_dashboard_data(
 
 @dashboard_router.get("/charts")
 def get_charts_data(
-    user_id: int,
+    user_id: str, 
     days: int = 7,
     dashboard_service: DashboardService = Depends(DashboardService),
-    user_pipeline_access_service: UserPipelineAccessService = Depends(UserPipelineAccessService)
+    user_pipeline_access_service: UserPipelineAccessService = Depends(UserPipelineAccessService),
+    current_user: dict = Depends(require_user_role)
 ):      
     try:
         if not user_id:

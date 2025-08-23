@@ -145,4 +145,3 @@ class DashboardRepository:
             ]
         except Exception:
             return [{"status": "SUCCESS", "count": 0, "color": "#05BAEE"}, {"status": "FAILED", "count": 0, "color": "#D6007F"}]
-

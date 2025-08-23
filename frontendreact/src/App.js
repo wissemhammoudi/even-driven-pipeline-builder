@@ -15,11 +15,26 @@ import ConfigManagementPage from './pages/ConfigManagementPage/ConfigManagementP
 import ViewPipelinePage from './pages/ViewPipelinePage/ViewPipelinePage'
 import PipelineManagementPage from './pages/PipelineManagementPage/PipelineManagementPage'
 import CreatePipelinePage from './pages/CreatePipelinePage/CreatePipelinePage'
+import UserManagementPage from './pages/UserManagementPage/UserManagementPage'
 import './index.css'  
 
 const ProtectedRoute = ({ children }) => {
   const { user } = useAuthStore()
   return user ? children : <Navigate to='/login' replace />
+}
+
+const AdminProtectedRoute = ({ children }) => {
+  const { user, isAdmin } = useAuthStore()
+  
+  if (!user) {
+    return <Navigate to='/login' replace />
+  }
+  
+  if (!isAdmin()) {
+    return <Navigate to='/dashboard' replace />
+  }
+  
+  return children
 }
 
 function App () {
@@ -86,7 +101,16 @@ function App () {
             <Route path='profile' element={<ProfilePage />} />
             <Route path='config-management' element={<ConfigManagementPage />} />
             <Route path='pipeline-management' element={<PipelineManagementPage />} />
-            <Route path='create-pipeline' element={<CreatePipelinePage />} />
+            <Route path='create-pipeline' element={
+              <AdminProtectedRoute>
+                <CreatePipelinePage />
+              </AdminProtectedRoute>
+            } />
+            <Route path='user-management' element={
+              <AdminProtectedRoute>
+                <UserManagementPage />
+              </AdminProtectedRoute>
+            } />
           </Route>
           <Route path='*' element={<Navigate to='/dashboard' replace />} />
         </Routes>

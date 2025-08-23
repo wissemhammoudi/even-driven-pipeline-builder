@@ -1,17 +1,24 @@
-from fastapi import APIRouter, HTTPException, Depends
-from source.service.pipeline_step.service import StepService
-from source.config.config import APIConfig,SupersetConfig
-from source.schema.superset.schema import VisualizationControl
+from fastapi import APIRouter, status, HTTPException, Depends
+from typing import List
+from source.schema.superset.schema import SupersetCreate, SupersetUpdate, SupersetResponse, VisualizationControl
+from source.exceptions.exceptions import SupersetNotFoundError
+from source.config.config import api_config, superset_config
+from pydantic import ValidationError
+from sqlalchemy.exc import IntegrityError
 from source.service.user.services import UserService
+from source.service.pipeline_step.service import PipelineStepService
+from source.schema.user.schemas import UserRole     
+from source.service.authentication.keycloak_auth import get_current_user, require_user_role, require_admin_role 
 
-superset_router = APIRouter(prefix=f"{APIConfig.api_prefix}/superset")
+superset_router = APIRouter(prefix=f"{api_config.api_prefix}/superset")
 
 
 @superset_router.post("/visualization/start")
 def start_visualization(
     control: VisualizationControl,
-    step_service: StepService = Depends(StepService),
-    user_service: UserService = Depends(UserService)
+    step_service: PipelineStepService = Depends(PipelineStepService),
+    user_service: UserService = Depends(UserService),
+    current_user: dict = Depends(require_user_role)
 ):
     """Start the visualization for a pipeline"""
     try:
@@ -24,7 +31,7 @@ def start_visualization(
             raise HTTPException(status_code=404, detail="No steps found for this pipeline")
         return {
                 "status": "started",
-                "visualization_url": f"{SupersetConfig.superset_user_url}",
+                "visualization_url": f"{superset_config.superset_user_url}",
                 "username": username,
                 "password": password,
             }

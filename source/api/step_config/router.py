@@ -1,52 +1,79 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, status, HTTPException, Depends
 from typing import List
-from source.schema.step_config.schema import Step_Config
+from source.schema.step_config.schema import StepConfigCreate, StepConfigUpdate, StepConfigResponse
 from source.service.step_config.service import configurationService
-from source.config.config import APIConfig
+from source.exceptions.exceptions import StepConfigNotFoundError
+from source.config.config import api_config
+from pydantic import ValidationError
+from sqlalchemy.exc import IntegrityError
+from source.service.user.services import UserService
+from source.schema.user.schemas import UserRole     
+from source.service.authentication.keycloak_auth import get_current_user, require_user_role, require_admin_role 
 
-step_config_router = APIRouter(prefix=f"{APIConfig.api_prefix}/stepConfig")
+step_config_router = APIRouter(prefix=f"{api_config.api_prefix}/stepConfig")
 
-@step_config_router.get("/", response_model=List[Step_Config])
-def get_step_config(configurationService: configurationService = Depends(configurationService)):
+@step_config_router.get("/", response_model=List[StepConfigResponse])
+def get_step_config(
+    configurationService: configurationService = Depends(configurationService),
+    current_user: dict = Depends(require_user_role)
+):
     return configurationService.list_Step_config()
 
 @step_config_router.get("/types")
-def get_step_types(configurationService: configurationService = Depends(configurationService)):
+def get_step_types(
+    configurationService: configurationService = Depends(configurationService),
+    current_user: dict = Depends(require_user_role)
+):
     return configurationService.get_all_step_types()
 
 @step_config_router.get("/tools")
-def get_tools_per_type(type: str,
-                       configurationService: configurationService = Depends(configurationService)
-                       ):
+def get_tools_per_type(
+    type: str,
+    configurationService: configurationService = Depends(configurationService),
+    current_user: dict = Depends(require_user_role)
+):
     return configurationService.get_all_step_tools_per_type(type)
 
 @step_config_router.get("/plugins")
-def get_plugins_per_tool_and_type(tool: str, type: str,
-                                  configurationService: configurationService = Depends(configurationService)
-                                  ):
+def get_plugins_per_tool_and_type(
+    tool: str, 
+    type: str,
+    configurationService: configurationService = Depends(configurationService),
+    current_user: dict = Depends(require_user_role)
+):
     return configurationService.get_all_step_plugins_type_per_tool_per_type(tool, type)
 
 @step_config_router.get("/toolsname")
-def get_tools(configurationService: configurationService = Depends(configurationService)):
+def get_tools(
+    configurationService: configurationService = Depends(configurationService),
+    current_user: dict = Depends(require_user_role)
+):
     return configurationService.get_all_tools_name()
 
 @step_config_router.get("/configpertool")
-def get_configs_per_tool( tool:str,
-                        configurationService: configurationService = Depends(configurationService)
-                         ):
+def get_configs_per_tool(
+    tool: str,
+    configurationService: configurationService = Depends(configurationService),
+    current_user: dict = Depends(require_user_role)
+):
     return configurationService.get_step_config_per_tool(tool)
 
 @step_config_router.get("/configpertooltype")
-def get_configs_per_tool( tool:str,type:str,pluginType:str,
-                        configurationService: configurationService = Depends(configurationService)
+def get_configs_per_tool(
+    tool: str,
+    type: str,
+    pluginType: str,
+    configurationService: configurationService = Depends(configurationService),
+    current_user: dict = Depends(require_user_role)
 ):
-    return configurationService.get_all_step_cpnfig_per_type_per_tool_per_plugintype(tool,type,pluginType)
+    return configurationService.get_all_step_cpnfig_per_type_per_tool_per_plugintype(tool, type, pluginType)
 
 @step_config_router.put("/{step_config_id}/deprecate",)
-def deprecate_step_config(step_config_id:int ,
-                        configurationService: configurationService = Depends(configurationService)
-
-                          ):
+def deprecate_step_config(
+    step_config_id: int,
+    configurationService: configurationService = Depends(configurationService),
+    current_user: dict = Depends(require_admin_role)
+):
     step_config = configurationService.get_by_id(step_config_id)
     if not step_config:
         raise HTTPException(status_code=404, detail="Step config not found")

@@ -4,22 +4,23 @@ from sqlalchemy import (
     Enum,
     TIMESTAMP,
     ForeignKey,
-    PrimaryKeyConstraint
+    PrimaryKeyConstraint,
+    String
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from source.repository.database import Base
-from source.schema.user_pipeline_acess.schema import GrantType
+from source.schema.user_pipeline_access.schema import GrantType
 
 
 class UserPipelineAccess(Base):
 
     __tablename__ = 'user_pipeline_access'
 
-    user_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
+    user_id = Column(String(36), ForeignKey('users.user_id'), nullable=False)  
     pipeline_id = Column(Integer, ForeignKey('pipelines.pipeline_id'), nullable=False)
     grant_type = Column(Enum(GrantType, name="grant_type"), nullable=False)
-    granted_by = Column(Integer, ForeignKey('users.user_id'), nullable=False)
+    granted_by = Column(String(36), ForeignKey('users.user_id'), nullable=False)
     granted_at = Column(TIMESTAMP, server_default=func.now(), nullable=False)
 
     __table_args__ = (

@@ -5,11 +5,11 @@ from source.models.pipeline.models import Pipeline
 from source.repository.user_pipeline_access.repository import UserPipelineAccessRepository
 from source.repository.pipeline.repository import PipelineRepository
 from source.repository.user.repository import UserRepository
-from source.schema.user_pipeline_acess.schema import UserPipelineAccessCreate, UserPipelineAccessUpdate, UserPipelineAccessResponse
-from source.schema.user_pipeline_acess.schema import GrantType
+from source.schema.user_pipeline_access.schema import UserPipelineAccessCreate, UserPipelineAccessUpdate, UserPipelineAccessResponse
+from source.schema.user_pipeline_access.schema import GrantType
 from source.exceptions.exceptions import UserNotFoundError, PipelineNotFoundError
 from source.service.PipelineManager.supersetclient import SupersetClient
-from source.config.config import SupersetConfig
+from source.config.config import superset_config
 from source.schema.user.schemas import UserRole
 from source.service.dashboard_pipeline_association.service import DashboardPipelineAssociationService
 from source.service.user_superset_account_association.service import UserSupersetAccountAssociationService
@@ -21,12 +21,12 @@ class UserPipelineAccessService:
         self.dashboard_pipeline_association=DashboardPipelineAssociationService()
         self.user_superset_account_association_service=UserSupersetAccountAssociationService()
         self.superset_client=SupersetClient(
-                    base_url=SupersetConfig.superset_url,
-                    username=SupersetConfig.superset_user,
-                    password=SupersetConfig.superset_password
+                    base_url=superset_config.superset_url,
+                    username=superset_config.superset_user,
+                    password=superset_config.superset_password
                     )
 
-    def _get_user_pipeline_ids(self, user_id: int) -> list:
+    def _get_user_pipeline_ids(self, user_id: str) -> list:
         try:
             user = self.user_repository.get_active_user_by_id(user_id)
 
@@ -69,7 +69,7 @@ class UserPipelineAccessService:
         except Exception as e:
             return {"success": False, "error": str(e)}
         
-    def bulk_grant_access(self, pipeline_id: int, user_ids: List[int], grant_type: GrantType, granted_by: int) -> List[UserPipelineAccessResponse]:
+    def bulk_grant_access(self, pipeline_id: int, user_ids: List[str], grant_type: GrantType, granted_by: str) -> List[UserPipelineAccessResponse]:
         results = []
         for user_id in user_ids:
             try:
@@ -105,7 +105,7 @@ class UserPipelineAccessService:
 
         return results
 
-    def bulk_revoke_access(self, pipeline_id: int, user_ids: List[int]) -> Dict[str, int]:
+    def bulk_revoke_access(self, pipeline_id: int, user_ids: List[str]) -> Dict[str, int]:
         success_count = 0
         failure_count = 0
         for user_id in user_ids:
@@ -150,10 +150,10 @@ class UserPipelineAccessService:
         return UserPipelineAccessResponse.from_orm(updated_access) 
     def get_users_for_pipeline(self, pipeline_id: int) -> List[User]:
         return self.access_repository.get_users_for_pipeline(pipeline_id)
-    def get_pipelines_for_user(self, user_id: int) -> List[Pipeline]:
+    def get_pipelines_for_user(self, user_id: str) -> List[Pipeline]:
         return self.access_repository.get_pipelines_for_user(user_id)
 
-    def can_start_pipeline(self, user_id: int, pipeline_id: int) -> bool:
+    def can_start_pipeline(self, user_id: str, pipeline_id: int) -> bool:
         user = self.user_repository.get_user_by_id(user_id)
         if user and user.role.value == UserRole.admin:
             return True        
@@ -162,7 +162,7 @@ class UserPipelineAccessService:
             return False
         return access.grant_type in [GrantType.OWNER, GrantType.VIEW]
 
-    def can_start_visualization(self, user_id: int, pipeline_id: int) -> bool:
+    def can_start_visualization(self, user_id: str, pipeline_id: int) -> bool:
         user = self.user_repository.get_user_by_id(user_id)
         if user and user.role.value == UserRole.admin:
             return True
@@ -171,7 +171,7 @@ class UserPipelineAccessService:
             return False
         return access.grant_type in [GrantType.OWNER, GrantType.VIEW]
 
-    def can_manage_access(self, user_id: int, pipeline_id: int) -> bool:
+    def can_manage_access(self, user_id: str, pipeline_id: int) -> bool:
         user = self.user_repository.get_user_by_id(user_id)
         if user and user.role.value == UserRole.admin:
             return True
@@ -180,7 +180,7 @@ class UserPipelineAccessService:
             return False
         return access.grant_type in [GrantType.OWNER]
 
-    def can_edit_pipeline(self, user_id: int, pipeline_id: int) -> bool:
+    def can_edit_pipeline(self, user_id: str, pipeline_id: int) -> bool:
         user = self.user_repository.get_user_by_id(user_id)
         if user and user.role.value == UserRole.admin:
             return True
@@ -189,7 +189,7 @@ class UserPipelineAccessService:
             return False
         return access.grant_type in [GrantType.OWNER, GrantType.VIEW]
 
-    def can_delete_pipeline(self, user_id: int, pipeline_id: int) -> bool:
+    def can_delete_pipeline(self, user_id: str, pipeline_id: int) -> bool:
         user = self.user_repository.get_user_by_id(user_id)
         if user and user.role.value == UserRole.admin:
             return True
@@ -198,7 +198,7 @@ class UserPipelineAccessService:
             return False
         return access.grant_type == GrantType.OWNER
 
-    def can_view_pipeline(self, user_id: int, pipeline_id: int) -> bool:
+    def can_view_pipeline(self, user_id: str, pipeline_id: int) -> bool:
         user = self.user_repository.get_user_by_id(user_id)
         if user and user.role.value == UserRole.admin:
             return True

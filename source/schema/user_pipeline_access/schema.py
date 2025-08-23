@@ -10,10 +10,10 @@ class GrantType(enum.Enum):
 
 
 class UserPipelineAccessBase(BaseModel):
-    user_id: int
+    user_id: str 
     pipeline_id: int
     grant_type: GrantType
-    granted_by: int
+    granted_by: str 
 
 
 class UserPipelineAccessCreate(UserPipelineAccessBase):
@@ -21,10 +21,10 @@ class UserPipelineAccessCreate(UserPipelineAccessBase):
 
 
 class UserPipelineAccessUpdate(BaseModel):
-    user_id: int
+    user_id: str 
     pipeline_id: int
     grant_type: GrantType
-    granted_by: int
+    granted_by: str 
 
 
 class UserPipelineAccessResponse(UserPipelineAccessBase):
@@ -36,14 +36,14 @@ class UserPipelineAccessResponse(UserPipelineAccessBase):
 
 class BulkAccessGrant(BaseModel):
     pipeline_id: int
-    user_ids: List[int]
+    user_ids: List[str]  
     grant_type: GrantType      
-    granted_by: int
+    granted_by: str 
 
 
 class BulkAccessRevoke(BaseModel):
     pipeline_id: int
-    user_ids: List[int]
+    user_ids: List[str] 
 
 
 class AccessSummary(BaseModel):

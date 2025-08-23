@@ -1,13 +1,13 @@
 import docker
 import time
 from typing import Dict, Any, Optional
-from source.config.config import DockerConfig
+from source.config.config import docker_config
 
 class DockerManager:
     """Manages Docker container operations"""
     
     def __init__(self):
-        self.client = docker.DockerClient(base_url=DockerConfig.Docker_Client_Base_Url)
+        self.client = docker.DockerClient(base_url=docker_config.Docker_Client_Base_Url)
         self.container = None
         
     def _create_container_config(self, name: str, image: str, port: Optional[int] = None) -> Dict[str, Any]:
