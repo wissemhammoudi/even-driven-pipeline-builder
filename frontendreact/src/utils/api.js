@@ -21,7 +21,13 @@ apiClient.interceptors.response.use(
   error => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      localStorage.setItem('login_status', 'loggedout')
       window.location.href = '/login'
+    } else if (error.response?.status === 403) {
+      console.error('Access denied: Insufficient permissions')
+    } else if (error.response?.status === 500) {
+      console.error('Server error:', error.response.data)
     }
     return Promise.reject(error)
   }
@@ -50,6 +56,26 @@ export const handleApiError = error => {
   }
 }
 
+// Utility function to check if user has required role
+export const hasRequiredRole = (userRole, requiredRole) => {
+  if (requiredRole === 'admin') {
+    return userRole === 'admin'
+  } else if (requiredRole === 'user') {
+    return userRole === 'user' || userRole === 'admin'
+  }
+  return false
+}
+
+// Utility function to get user role from localStorage
+export const getUserRole = () => {
+  try {
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    return user.role || user.mapped_role || null
+  } catch {
+    return null
+  }
+}
+
 export const api = {
   get: (url, config = {}) => apiClient.get(url, config),
   post: (url, data = {}, config = {}) => apiClient.post(url, data, config),
@@ -60,9 +86,11 @@ export const api = {
 
 export const userAPI = {
   login: credentials => api.post('/api/v1/users/login', credentials),
+  getCurrentUser: () => api.get('/api/v1/users/me'),
   updateProfile: data => api.patch('/api/v1/users/', data),
   updatePassword: data => api.patch('/api/v1/users/password', data),
   getUsers: () => api.get('/api/v1/users/'),
+  getUserByUsername: username => api.get(`/api/v1/users/${username}`),
 }
 
 export const stepConfigAPI = {
@@ -143,4 +171,21 @@ export const supersetAPI = {
 export const schemaChangeAPI = {
   getSchemaChanges: (pipelineId) => api.get(`/change-detection/schema-changes/pipeline/${pipelineId}`),
   getBreakingChanges: (pipelineId) => api.get(`/change-detection/schema-changes/pipeline/${pipelineId}/breaking`)
+}
+
+export const pipelineStepAPI = {
+  createStep: data => api.post('/api/v1/pipeline-steps/', data),
+  updateStep: data => api.patch('/api/v1/pipeline-steps/', data),
+  deleteStep: stepId => api.delete(`/api/v1/pipeline-steps/${stepId}`),
+  getStepsByPipeline: pipelineId => api.get(`/api/v1/pipeline-steps/step/${pipelineId}`),
+}
+
+export const stepConfigurationAssociationAPI = {
+  createAssociation: data => api.post('/api/v1/step-configuration-association/', data),
+  getConfigsByStep: stepId => api.get(`/api/v1/step-configuration-association/step/${stepId}/configs`),
+  getStepsByConfig: configId => api.get(`/api/v1/step-configuration-association/config/${configId}/steps`),
+}
+
+export const agenticTransformationAPI = {
+  createTransformation: data => api.post('/api/v1/agentic-transformation/', data),
 }

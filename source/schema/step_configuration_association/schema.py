@@ -17,4 +17,3 @@ class StepConfigurationAssociationResponse(StepConfigurationAssociationBase):
     
     class Config:
         from_attributes = True
-

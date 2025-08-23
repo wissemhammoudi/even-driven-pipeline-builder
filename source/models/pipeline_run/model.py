@@ -12,7 +12,7 @@ class PipelineRun(Base):
     start_time = Column(DateTime)
     end_time = Column(DateTime)
     status = Column(Enum(RunStatus))
-    created_by = Column(Integer, ForeignKey("users.user_id"))
+    created_by = Column(String(36), ForeignKey("users.user_id")) 
     is_deleted = Column(Boolean, default=False)
 
     pipeline = relationship("Pipeline", back_populates="pipeline_runs")

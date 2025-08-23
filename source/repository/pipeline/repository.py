@@ -10,7 +10,7 @@ class PipelineRepository:
     def __init__(self):
         self.db = database
 
-    def get_paginated_pipelines(self, offset: int = 0, limit: int = 10, deprecated: bool = False, name: str = None, created_date=None, user_id: Optional[int] = None):
+    def get_paginated_pipelines(self, offset: int = 0, limit: int = 10, deprecated: bool = False, name: str = None, created_date=None, user_id: Optional[str] = None):
         if user_id is not None:
             query = self.db.query(Pipeline).join(
                 UserPipelineAccess, 
@@ -38,7 +38,7 @@ class PipelineRepository:
         pipelines = self.db.query(Pipeline).filter(Pipeline.is_deleted == False)
         return [pipeline.pipeline_id for pipeline in pipelines]
     
-    def get_active_pipeline_by_user_id(self,user_id: int) -> List[Pipeline]:
+    def get_active_pipeline_by_user_id(self,user_id: str) -> List[Pipeline]:
         return self.db.query(Pipeline).filter(
             Pipeline.created_by == user_id,
             Pipeline.is_deleted == False
@@ -82,7 +82,7 @@ class PipelineRepository:
             self.db.rollback()
             raise e
             
-    def get_user_by_id(self,user_id: int) -> Optional[User]:
+    def get_user_by_id(self,user_id: str) -> Optional[User]:
         return self.db.query(User).filter(User.user_id == user_id).first()
     
     def rollback(self):

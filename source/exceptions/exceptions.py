@@ -12,5 +12,24 @@ class DuplicateUserError(Exception):
 
 class InvalidPasswordError(Exception):
     pass 
+
 class StepIdNotFoundInPipeline(Exception):
+    pass
+
+class PipelineRunNotFoundError(Exception):
+    pass
+
+class StepConfigNotFoundError(Exception):
+    pass
+
+class SupersetNotFoundError(Exception):
+    pass
+
+class AgenticTransformationNotFoundError(Exception):
+    pass
+
+class StepConfigurationAssociationNotFoundError(Exception):
+    pass
+
+class PipelineDashboardNotFoundError(Exception):
     pass

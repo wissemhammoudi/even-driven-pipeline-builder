@@ -1,3 +1,7 @@
+CREATE SCHEMA IF NOT EXISTS keycloak_schema;
+CREATE SCHEMA IF NOT EXISTS n8n_schema;
+CREATE SCHEMA IF NOT EXISTS superset_schema;
+
 CREATE TABLE IF NOT EXISTS configurations (
     step_config_id SERIAL PRIMARY KEY,
     type VARCHAR(100) NOT NULL,

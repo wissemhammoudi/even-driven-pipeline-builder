@@ -10,7 +10,8 @@ import {
   Bars3Icon,
   XMarkIcon,
   ChevronLeftIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  UsersIcon
 } from '@heroicons/react/24/outline'
 import useAuthStore from '../../../store/authStore'
 import logo from '../../../assets/logo.svg'
@@ -21,6 +22,13 @@ const Sidebar = () => {
   const location = useLocation()
   const { user, logout, isAdmin } = useAuthStore()
 
+  // Enhanced debug logging
+  console.log('Sidebar - Current user:', user);
+  console.log('Sidebar - isAdmin() result:', isAdmin());
+  console.log('Sidebar - User role:', user?.role);
+  console.log('Sidebar - User mapped_role:', user?.mapped_role);
+  console.log('Sidebar - User object keys:', user ? Object.keys(user) : 'No user');
+  
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
     ...(isAdmin()
@@ -32,6 +40,9 @@ const Sidebar = () => {
       icon: ChartBarIcon
     },
     { name: 'Supported Connectors', href: '/config-management', icon: CogIcon },
+    ...(isAdmin()
+      ? [{ name: 'User Management', href: '/user-management', icon: UsersIcon }]
+      : []),
     { name: 'Profile', href: '/profile', icon: UserIcon }
   ]
 
@@ -135,9 +146,12 @@ const Sidebar = () => {
                     <p className='text-sm font-medium text-black'>
                       {user?.username || 'User'}
                     </p>
+                    {isAdmin() && (
+                      <span className='text-xs text-blue-600 font-medium'>Admin</span>
+                    )}
                     <button
                       onClick={handleLogout}
-                      className='text-xs font-medium text-gray-600 hover:text-primary'
+                      className='text-xs font-medium text-gray-600 hover:text-primary block mt-1'
                     >
                       Sign out
                     </button>
@@ -200,6 +214,9 @@ const Sidebar = () => {
                     <p className='text-base font-medium text-black'>
                       {user?.username || 'User'}
                     </p>
+                    {isAdmin() && (
+                      <span className='text-sm text-blue-600 font-medium'>Admin</span>
+                    )}
                     <button
                       onClick={handleLogout}
                       className='text-sm font-medium text-gray-600 hover:text-primary'

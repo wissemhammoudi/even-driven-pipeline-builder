@@ -1,6 +1,7 @@
 import json
 from typing import Optional
-from source.config.config import GitHubConfig
+import subprocess
+from source.config.config import github_config
 
 class GitManager:
     """Manages Git and GitHub operations"""
@@ -17,7 +18,7 @@ class GitManager:
         })
         
         create_repo_result = self.docker_manager.exec_command(
-            command=["curl", f"-u {GitHubConfig.github_email}:{GitHubConfig.github_token}", 
+            command=["curl", f"-u {github_config.github_email}:{github_config.github_token}", 
                     "https://api.github.com/user/repos", f"-d {body}"],
             workdir=workdir,
         )
@@ -31,12 +32,12 @@ class GitManager:
         """Initialize git repository and push to GitHub"""
         git_commands = [
             "git init",
-            f"git config --global user.name '{GitHubConfig.github_username}'",
-            f"git config --global user.email '{GitHubConfig.github_email}'",
+            f"git config --global user.name '{github_config.github_username}'",
+            f"git config --global user.email '{github_config.github_email}'",
             "git add .",
             ["git", "commit", "-m", "Initial project commit"],
             "git branch -M main",
-            f"git remote add origin https://{GitHubConfig.github_username}:{GitHubConfig.github_token}@github.com/{GitHubConfig.github_username}/{repo_name}.git",
+            f"git remote add origin https://{github_config.github_username}:{github_config.github_token}@github.com/{github_config.github_username}/{repo_name}.git",
             "git push -u origin main"
         ]
         
@@ -51,7 +52,6 @@ class GitManager:
         repo_name = f"{container_name.split('_')[0]}_{container_name.split('_')[1]}"
         
         try:
-            # Check if workdir exists and has content
             check_dir_result = self.docker_manager.exec_command(
                 command=["sh", "-c", f"if [ -d '{workdir}' ] && [ \"$(ls -A {workdir})\" ]; then echo 'exists_with_content'; else echo 'empty_or_not_exists'; fi"],
                 workdir="/"
@@ -69,7 +69,6 @@ class GitManager:
                 
         except Exception as e:
             print(f"Warning: Error pushing code to GitHub: {str(e)}")
-            # Don't raise exception, just log the warning
 
     def pull_from_github(self, container_name: str):
         """Pull code from GitHub repository"""
@@ -83,7 +82,7 @@ class GitManager:
             print(f"Attempting to pull code from GitHub repository: {repo_name}")
             
             clone_result = self.docker_manager.exec_command(
-                command=f"git clone https://{GitHubConfig.github_username}:{GitHubConfig.github_token}@github.com/{GitHubConfig.github_username}/{repo_name}.git"
+                command=f"git clone https://{github_config.github_username}:{github_config.github_token}@github.com/{github_config.github_username}/{repo_name}.git"
             )
             
             if not clone_result or "fatal:" in clone_result.lower():

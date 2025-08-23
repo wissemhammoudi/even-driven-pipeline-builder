@@ -1,6 +1,6 @@
 from fastapi import APIRouter, status, HTTPException, Depends
 from typing import List
-from source.schema.user_pipeline_acess.schema import (
+from source.schema.user_pipeline_access.schema import (
     UserPipelineAccessUpdate, 
     UserPipelineAccessResponse,
     BulkAccessGrant,
@@ -9,16 +9,18 @@ from source.schema.user_pipeline_acess.schema import (
 )
 from source.service.user_pipeline_access.service import UserPipelineAccessService
 from source.exceptions.exceptions import UserNotFoundError, PipelineNotFoundError
-from source.config.config import APIConfig
+from source.config.config import api_config
+from source.service.authentication.keycloak_auth import require_user_role
 
 user_pipeline_access_router = APIRouter(
-    prefix=f"{APIConfig.api_prefix}/user-pipeline-access"
+    prefix=f"{api_config.api_prefix}/user-pipeline-access"
 )
 @user_pipeline_access_router.put("/update", response_model=UserPipelineAccessResponse)
 def update_access(
     access_data: UserPipelineAccessUpdate,
-    user_id: int,
-    access_service: UserPipelineAccessService = Depends(UserPipelineAccessService)
+    user_id: str, 
+    access_service: UserPipelineAccessService = Depends(UserPipelineAccessService),
+    current_user: dict = Depends(require_user_role)
 ):
     try:
         if not access_service.can_manage_access(user_id, access_data.pipeline_id):
@@ -42,8 +44,9 @@ def update_access(
 @user_pipeline_access_router.post("/bulk-grant", response_model=List[UserPipelineAccessResponse])
 def bulk_grant_access(
     bulk_data: BulkAccessGrant,
-    user_id: int,
-    access_service: UserPipelineAccessService = Depends(UserPipelineAccessService)
+    user_id: str, 
+    access_service: UserPipelineAccessService = Depends(UserPipelineAccessService),
+    current_user: dict = Depends(require_user_role)
 ):
     try:
         if not access_service.can_manage_access(user_id, bulk_data.pipeline_id):
@@ -68,8 +71,9 @@ def bulk_grant_access(
 @user_pipeline_access_router.post("/bulk-revoke", response_model=BulkOperationResult)
 def bulk_revoke_access(
     bulk_data: BulkAccessRevoke,
-    user_id: int,
-    access_service: UserPipelineAccessService = Depends(UserPipelineAccessService)
+    user_id: str,  
+    access_service: UserPipelineAccessService = Depends(UserPipelineAccessService),
+    current_user: dict = Depends(require_user_role)
 ):
     try:
         if not access_service.can_manage_access(user_id, bulk_data.pipeline_id):
@@ -87,8 +91,9 @@ def bulk_revoke_access(
 @user_pipeline_access_router.get("/pipeline/{pipeline_id}/users")
 def get_users_for_pipeline(
     pipeline_id: int,
-    user_id: int,
-    access_service: UserPipelineAccessService = Depends(UserPipelineAccessService)
+    user_id: str,  
+    access_service: UserPipelineAccessService = Depends(UserPipelineAccessService),
+    current_user: dict = Depends(require_user_role)
 ):
     try:
         if not access_service.can_manage_access(user_id, pipeline_id):
@@ -117,8 +122,9 @@ def get_users_for_pipeline(
 @user_pipeline_access_router.get("/pipeline/{pipeline_id}/permissions/{user_id}")
 def get_user_permissions(
     pipeline_id: int,
-    user_id: int,
-    access_service: UserPipelineAccessService = Depends(UserPipelineAccessService)
+    user_id: str,  
+    access_service: UserPipelineAccessService = Depends(UserPipelineAccessService),
+    current_user: dict = Depends(require_user_role)
 ):
     try:
         permissions = {

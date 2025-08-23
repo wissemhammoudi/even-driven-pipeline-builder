@@ -2,7 +2,6 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { userAPI } from '../api/userApi'
 import toast from 'react-hot-toast'
-import { decodeJWTToken } from '../utils/auth'
 import { handleApiError } from '../utils/errorHandler'
 
 const useAuthStore = create(
@@ -24,11 +23,14 @@ const useAuthStore = create(
           const response = await userAPI.login(credentials)
           const access_token = response.access_token
 
-          const user = decodeJWTToken(access_token)
-
+          // Store the token first
           localStorage.setItem('token', access_token)
-          localStorage.setItem('user', JSON.stringify(user))
           localStorage.setItem('login_status', 'loggedin')
+
+          // Fetch user information from backend to get accurate role data
+          const user = await userAPI.getCurrentUser()
+
+          localStorage.setItem('user', JSON.stringify(user))
 
           set({
             user,
@@ -70,7 +72,9 @@ const useAuthStore = create(
 
         if (token && loginStatus === 'loggedin') {
           try {
-            const userData = decodeJWTToken(token)
+            // Fetch user information from backend to get accurate role data
+            const userData = await userAPI.getCurrentUser()
+            
             if (userData) {
               set({
                 user: userData,
@@ -84,6 +88,7 @@ const useAuthStore = create(
               return false
             }
           } catch (error) {
+            console.error('Auth check failed:', error)
             get().logout()
             return false
           }
@@ -121,7 +126,19 @@ const useAuthStore = create(
 
       isAdmin: () => {
         const user = get().user
-        const isAdminUser = user?.role === 'admin'
+        if (!user) return false
+        
+        // Check both role and mapped_role fields for compatibility
+        const isAdminUser = user?.role === 'admin' || user?.mapped_role === 'admin'
+        
+        // Debug logging for role detection
+        console.log('AuthStore - isAdmin check:', {
+          user: user,
+          role: user?.role,
+          mapped_role: user?.mapped_role,
+          result: isAdminUser
+        })
+        
         return isAdminUser
       },
 

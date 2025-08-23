@@ -3,11 +3,11 @@ from typing import List
 from source.models.pipeline.models import Pipeline
 from source.schema.pipeline.schema import PipelineCreate, PipelineDelete, StepAdd, StepDelete, PipelineUpdate, PipelineResponse, StepTypeEnum
 from source.repository.pipeline.repository import PipelineRepository
-from source.service.pipeline_step.service import StepService
+from source.service.pipeline_step.service import PipelineStepService
 from source.service.step_configuration_association.service import StepConfigurationAssociationService
-from source.exceptions.exceptions import PipelineNotFoundError,StepIdNotFoundInPipeline
-from source.schema.pipeline_step.schema import StepCreate
-from source.schema.step_stepconfi_association.schema import StepConfigurationAssociationCreate
+from source.exceptions.exceptions import PipelineNotFoundError, StepIdNotFoundInPipeline
+from source.schema.pipeline_step.schema import PipelineStepCreate
+from source.schema.step_configuration_association.schema import StepConfigurationAssociationCreate
 from source.service.PipelineManager.pipelineManager import PipelineManager
 from source.service.dashboard_pipeline_association.service import DashboardPipelineAssociationService
 
@@ -15,11 +15,11 @@ from source.service.dashboard_pipeline_association.service import DashboardPipel
 class PipelineService:
     def __init__(self):
         self.pipeline_repository = PipelineRepository()
-        self.step_service = StepService()
+        self.step_service = PipelineStepService()
         self.StepConfigurationAssociation=StepConfigurationAssociationService()
         self.dashboard_pipeline_association=DashboardPipelineAssociationService()
 
-    def list_pipelines(self, user_id: int, offset: int = 0, limit: int = 10, deprecated: bool = False, name: str = None, created_date=None):
+    def list_pipelines(self, user_id: str, offset: int = 0, limit: int = 10, deprecated: bool = False, name: str = None, created_date=None):
         try:
 
             pipelines, total_count = self.pipeline_repository.get_paginated_pipelines(
@@ -47,7 +47,7 @@ class PipelineService:
     def get_pipline_by_id(self,pipeline_id:int) -> Pipeline:
         return self.pipeline_repository.get_pipline_by_id(pipeline_id)
 
-    def list_pipelines_by_user(self, user_id: int) -> List[Pipeline]:
+    def list_pipelines_by_user(self, user_id: str) -> List[Pipeline]:
         pipelines = self.pipeline_repository.get_active_pipeline_by_user_id(user_id)
         return pipelines
     def create_pipeline(self, pipeline_data: PipelineCreate):
@@ -73,7 +73,7 @@ class PipelineService:
         
         try:
             for step_data in pipeline_data.step_list: 
-                step = StepCreate(
+                step = PipelineStepCreate(
                         name=step_data.name,
                         description=step_data.description,
                         step_config=step_data.step_config,

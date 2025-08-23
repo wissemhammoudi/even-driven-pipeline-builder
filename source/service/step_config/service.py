@@ -1,13 +1,13 @@
 from source.repository.step_config.repository import configurationRepository
 from source.service.step_configuration_association.service import StepConfigurationAssociationService
-from source.service.pipeline_step.service import StepService
+from source.service.pipeline_step.service import PipelineStepService
 from source.repository.pipeline.repository import PipelineRepository
 
 class configurationService:
     def __init__(self):
         self.repository = configurationRepository()
         self.stepConfigAssociationService =StepConfigurationAssociationService()
-        self.stepSerivce=StepService()
+        self.stepSerivce=PipelineStepService()
         self.pipelineRepotory =PipelineRepository()
 
     def list_Step_config(self):

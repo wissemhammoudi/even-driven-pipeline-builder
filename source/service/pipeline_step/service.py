@@ -1,15 +1,15 @@
 from sqlalchemy.orm import Session
 from source.models.pipeline_step.models import Step
-from source.schema.pipeline_step.schema import StepCreate, StepUpdate
+from source.schema.pipeline_step.schema import PipelineStepCreate, PipelineStepUpdate
 from source.repository.pipeline_step.repository import StepRepository
 from source.exceptions.exceptions import StepNotFoundError
 
 
-class StepService:
+class PipelineStepService:
     def __init__(self):
         self.step_repository = StepRepository()
 
-    def create_step(self, data: StepCreate):
+    def create_step(self, data: PipelineStepCreate):
         step = Step(
             name=data.name,
             description=data.description,
@@ -20,7 +20,7 @@ class StepService:
         
         return self.step_repository.create_step(step)
 
-    def update_step(self, data: StepUpdate):
+    def update_step(self, data: PipelineStepUpdate):
         step = self.step_repository.get_step_by_id(data.step_id)
         if not step:
             raise StepNotFoundError("Step not found")
@@ -30,7 +30,7 @@ class StepService:
             step.description = data.description
         if data.step_config:
             step.step_config = data.step_config
-        self.step_repository.commit(self.db)
+        self.step_repository.commit()
         return {
             "message": "Step updated successfully",
             "step": {

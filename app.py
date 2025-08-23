@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from source.repository.database import engine, Base  
 from source.api.pipeline.router import pipeline_router
-from source.config.config import AuthConfig,APIConfig
+from source.config.config import auth_config, api_config
 from source.api.user.router import user_router
 from source.api.pipeline_step.router import step_router
 from source.api.step_config.router import step_config_router
@@ -13,21 +13,21 @@ from source.api.agentic_transformation.router import router_transformation
 from source.api.user_pipeline_access.router import user_pipeline_access_router
 from source.api.dashboard.router import dashboard_router
 from source.api.pipeline_dashboard.router import pipeline_dashboard_router
-from source.service.user.services import UserService
+
 from source.service.PipelineManager.transfomrationManager.n8n_manager import N8NManager
 
 
 app = FastAPI(
     title='Data Integration Component',
     description='A RESTful API for Pipeline Manager Component',
-    version=AuthConfig.version,
+    version=auth_config.version,
 )
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        APIConfig.frontend_url,
-        APIConfig.frontend_url_develop,
+        api_config.frontend_url,
+        api_config.frontend_url_develop,
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -53,16 +53,100 @@ Base.metadata.create_all(bind=engine)
 @app.on_event("startup")
 async def startup_event():
     """Run startup tasks"""
-    print("Starting up...")
+    print("Starting up Event-Driven Pipeline Builder...")
     
-    user_service = UserService()
-    user_service.create_initial_users()
+    try:
+        from source.service.keycloak_service import get_keycloak_service
+        
+        print("🔐 Setting up Keycloak authentication...")
+        
+        keycloak_service = get_keycloak_service()
+        
+        print("🔐 Waiting for Keycloak to be ready...")
+        keycloak_ready = await keycloak_service.wait_for_ready(max_attempts=15, delay=3.0)
+        if not keycloak_ready:
+            print("❌ Keycloak failed to become ready")
+            return
+        
+        print("✅ Keycloak is ready")
+        
+        realm_ready = await keycloak_service.check_and_create_realm()
+        if not realm_ready:
+            print("❌ Failed to ensure realm is ready")
+            return
+        
+        print("✅ Keycloak realm is ready")
+        
+        setup_result = await keycloak_service.setup_keycloak()
+        if not setup_result["success"]:
+            print(f"❌ Keycloak setup failed: {setup_result['message']}")
+            return
+        
+        print("✅ Keycloak setup completed successfully")
+        
+        print("👤 Ensuring admin user exists...")
+        admin_user_ready = await keycloak_service.ensure_admin_user_exists()
+        if not admin_user_ready:
+            print("❌ Failed to ensure admin user exists")
+            return
+        
+        print("✅ Admin user is ready")
+        
+        print("👥 Creating demo users...")
+        demo_users_created = await keycloak_service.create_demo_users()
+        if demo_users_created:
+            print("✅ Demo users created successfully")
+        else:
+            print("⚠️ Demo users creation failed or skipped")
+        
+    except Exception as e:
+        print(f"❌ Keycloak setup failed: {e}")
+        return
     
-    n8n_manager = N8NManager()
-    n8n_manager.initialize_n8n()
+    try:
+        print("🔧 Setting up N8N...")
+        n8n_manager = N8NManager()
+        n8n_manager.initialize_n8n()
+        print("✅ N8N setup completed")
+    except Exception as e:
+        print(f"❌ N8N initialization failed: {e}")
     
-    print("Startup completed!")
+    try:
+        print("👥 Initial users are managed by Keycloak")
+    except Exception as e:
+        print(f"❌ User initialization failed: {e}")
+    
+    print("🎉 Startup completed successfully!")
 
 @app.get("/")
 def root():
     return {"message": "Event Driven Data Ingestion Service is running!"}
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {
+        "status": "healthy",
+        "service": "Event Driven Data Ingestion Service",
+        "version": auth_config.version,
+        "authentication": "Keycloak-based"
+    }
+
+@app.get("/auth/status")
+async def auth_status():
+    """Check authentication service status"""
+    try:
+        from source.service.keycloak_service import get_keycloak_service
+        keycloak_service = get_keycloak_service()
+        connection_test = await keycloak_service.test_connection()
+        return {
+            "keycloak_status": "connected" if connection_test["reachable"] else "disconnected",
+            "authentication_service": "Keycloak",
+            "realm": "pipeline-realm"
+        }
+    except Exception as e:
+        return {
+            "keycloak_status": "error",
+            "error": str(e),
+            "authentication_service": "Keycloak"
+        }

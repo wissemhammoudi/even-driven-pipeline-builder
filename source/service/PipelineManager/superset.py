@@ -1,10 +1,11 @@
 from typing import Dict, List,Any
 from source.service.PipelineManager.interface import BaseStepRunner
-from source.config.config import SupersetConfig
+from source.config.config import superset_config
 from source.service.PipelineManager.supersetclient import SupersetClient
 from source.models.user.models import User
 import time
 from source.schema.user.schemas import UserRole
+import requests
 class SupersetRunner(BaseStepRunner):
     def __init__(self):
         self.container = None 
@@ -17,7 +18,7 @@ class SupersetRunner(BaseStepRunner):
 
     def _initialize_superset_client(self,username,password ) -> None:
         """Initialize SupersetClient based on user role"""
-        superset_url = SupersetConfig.superset_url
+        superset_url = superset_config.superset_url
         self.client = SupersetClient(superset_url, username, password)
         if not self.client.authenticate():
             raise RuntimeError("Failed to authenticate with Superset")
@@ -30,8 +31,8 @@ class SupersetRunner(BaseStepRunner):
         try:
             container_name = f"{name.split('_')[0]}_{name.split('_')[1]}"
             step_config = step["config"].step_config
-            self.username = SupersetConfig.superset_user
-            self.password = SupersetConfig.superset_password
+            self.username = superset_config.superset_user
+            self.password = superset_config.superset_password
             self._initialize_superset_client(self.username, self.password)
 
             database = self.client.create_database_if_not_exists(
@@ -53,8 +54,8 @@ class SupersetRunner(BaseStepRunner):
             dashboard_title = f"{container_name} Dashboard"
             dashboard_id = self.client.create_dashboard(
                 dashboard_title=dashboard_title,
-                owners=[SupersetConfig.superset_user_id],
-                roles=[SupersetConfig.superset_admin_role_id], 
+                owners=[superset_config.superset_user_id],
+                roles=[superset_config.superset_admin_role_id], 
                 published=True
             )
 

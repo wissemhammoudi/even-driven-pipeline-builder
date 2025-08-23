@@ -12,6 +12,7 @@ const ProfileInfoEdit = ({ formData, errors, onChange, onSubmit, isLoading, onCa
         value={formData.username}
         onChange={onChange}
         error={errors.username}
+        placeholder='Enter your username'
       />
       <Input
         label='Email'
@@ -20,6 +21,7 @@ const ProfileInfoEdit = ({ formData, errors, onChange, onSubmit, isLoading, onCa
         value={formData.email}
         onChange={onChange}
         error={errors.email}
+        placeholder='Enter your email'
       />
       <Input
         label='First Name'
@@ -28,6 +30,7 @@ const ProfileInfoEdit = ({ formData, errors, onChange, onSubmit, isLoading, onCa
         value={formData.first_name}
         onChange={onChange}
         error={errors.first_name}
+        placeholder='Enter your first name'
       />
       <Input
         label='Last Name'
@@ -36,6 +39,7 @@ const ProfileInfoEdit = ({ formData, errors, onChange, onSubmit, isLoading, onCa
         value={formData.last_name}
         onChange={onChange}
         error={errors.last_name}
+        placeholder='Enter your last name'
       />
     </div>
     <div className='flex space-x-2'>

@@ -9,7 +9,7 @@ from source.service.PipelineManager.dlt import DltRunner
 from source.service.PipelineManager.sqlmesh import SqlmeshRunner
 from source.service.PipelineManager.superset import SupersetRunner
 from source.schema.pipeline.schema import ToolEnum, StepTypeEnum
-from source.config.config import DockerConfig
+from source.config.config import docker_config
 from source.service.user.services import UserService
 class PipelineManager:
     """Unified pipeline manager that orchestrates Docker and Git operations"""
@@ -66,9 +66,9 @@ class PipelineManager:
     def get_image(self, tool: str) -> str:
         """Get Docker image for the tool"""
         if tool == ToolEnum.MELTANO:
-            return DockerConfig.meltano_docker_image
+            return docker_config.meltano_docker_image
         elif tool in [ToolEnum.DLT, ToolEnum.SQLMESH, ToolEnum.SUPERSET]:
-            return DockerConfig.dlt_sqlmesh_superset_docker_image
+            return docker_config.dlt_sqlmesh_superset_docker_image
         else:
             raise ValueError(f"Unsupported step type: {tool}")
 
