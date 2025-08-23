@@ -13,7 +13,7 @@ from source.api.agentic_transformation.router import router_transformation
 from source.api.user_pipeline_access.router import user_pipeline_access_router
 from source.api.dashboard.router import dashboard_router
 from source.api.pipeline_dashboard.router import pipeline_dashboard_router
-
+from source.service.keycloak_service import get_keycloak_service    
 from source.service.PipelineManager.transfomrationManager.n8n_manager import N8NManager
 
 
@@ -53,70 +53,28 @@ Base.metadata.create_all(bind=engine)
 @app.on_event("startup")
 async def startup_event():
     """Run startup tasks"""
-    print("Starting up Event-Driven Pipeline Builder...")
-    
     try:
-        from source.service.keycloak_service import get_keycloak_service
-        
-        print("🔐 Setting up Keycloak authentication...")
-        
-        keycloak_service = get_keycloak_service()
-        
-        print("🔐 Waiting for Keycloak to be ready...")
+        keycloak_service = get_keycloak_service()     
         keycloak_ready = await keycloak_service.wait_for_ready(max_attempts=15, delay=3.0)
         if not keycloak_ready:
-            print("❌ Keycloak failed to become ready")
-            return
-        
-        print("✅ Keycloak is ready")
-        
+            return        
         realm_ready = await keycloak_service.check_and_create_realm()
         if not realm_ready:
-            print("❌ Failed to ensure realm is ready")
             return
-        
-        print("✅ Keycloak realm is ready")
-        
         setup_result = await keycloak_service.setup_keycloak()
         if not setup_result["success"]:
-            print(f"❌ Keycloak setup failed: {setup_result['message']}")
             return
-        
-        print("✅ Keycloak setup completed successfully")
-        
-        print("👤 Ensuring admin user exists...")
         admin_user_ready = await keycloak_service.ensure_admin_user_exists()
         if not admin_user_ready:
-            print("❌ Failed to ensure admin user exists")
             return
-        
-        print("✅ Admin user is ready")
-        
-        print("👥 Creating demo users...")
-        demo_users_created = await keycloak_service.create_demo_users()
-        if demo_users_created:
-            print("✅ Demo users created successfully")
-        else:
-            print("⚠️ Demo users creation failed or skipped")
-        
+        await keycloak_service.create_demo_users()
     except Exception as e:
-        print(f"❌ Keycloak setup failed: {e}")
-        return
-    
+        pass
     try:
-        print("🔧 Setting up N8N...")
         n8n_manager = N8NManager()
         n8n_manager.initialize_n8n()
-        print("✅ N8N setup completed")
     except Exception as e:
-        print(f"❌ N8N initialization failed: {e}")
-    
-    try:
-        print("👥 Initial users are managed by Keycloak")
-    except Exception as e:
-        print(f"❌ User initialization failed: {e}")
-    
-    print("🎉 Startup completed successfully!")
+        pass
 
 @app.get("/")
 def root():
@@ -129,14 +87,12 @@ async def health_check():
         "status": "healthy",
         "service": "Event Driven Data Ingestion Service",
         "version": auth_config.version,
-        "authentication": "Keycloak-based"
     }
 
 @app.get("/auth/status")
 async def auth_status():
     """Check authentication service status"""
     try:
-        from source.service.keycloak_service import get_keycloak_service
         keycloak_service = get_keycloak_service()
         connection_test = await keycloak_service.test_connection()
         return {

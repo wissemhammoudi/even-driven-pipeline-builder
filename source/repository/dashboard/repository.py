@@ -1,186 +1,147 @@
-from typing import List, Optional, Dict, Any
-from sqlalchemy.orm import Session
-from sqlalchemy import func, case
+from typing import Dict, Any, List
 from datetime import datetime, timedelta
+from sqlalchemy import func, desc, case
 from source.models.pipeline.models import Pipeline
 from source.models.pipeline_run.model import PipelineRun
+from source.models.user.models import User
+from source.repository.user_pipeline_access.repository import UserPipelineAccessRepository
 from source.repository.database import get_db
+
+database = get_db()
 
 class DashboardRepository:
     def __init__(self):
-        self.db: Session = next(get_db())
-    
-    def _format_duration(self, seconds: float) -> str:
-        if seconds <= 0:
-            return "0m 0s"
-        return f"{int(seconds // 60)}m {int(seconds % 60)}s"
-    
-    def get_pipeline_stats_by_ids(self, pipeline_ids: List[int]) -> Dict[str, Any]:
-        """Get pipeline statistics for given pipeline IDs"""
+        self.db = database
+        self.user_pipeline_access_repository = UserPipelineAccessRepository()
+
+    def get_pipeline_stats_by_ids(self, pipeline_ids: List[int]) -> Dict[str, int]:
+        if not pipeline_ids:
+            return {"total": 0, "active": 0, "deprecated": 0}
+        
         try:
-            total = self.db.query(Pipeline).filter(Pipeline.pipeline_id.in_(pipeline_ids)).count()
-            active = self.db.query(Pipeline).filter(
-                Pipeline.pipeline_id.in_(pipeline_ids),
-                Pipeline.is_deprecated == False
-            ).count()
-            deprecated = self.db.query(Pipeline).filter(
-                Pipeline.pipeline_id.in_(pipeline_ids),
-                Pipeline.is_deprecated == True
-            ).count()
+            stats = self.db.query(
+                func.count(Pipeline.pipeline_id).label('total'),
+                func.sum(case((Pipeline.is_deprecated == False, 1), else_=0)).label('active')
+            ).filter(Pipeline.pipeline_id.in_(pipeline_ids)).first()
+            
+            total = stats.total or 0
+            active = stats.active or 0
             
             return {
                 "total": total,
                 "active": active,
-                "deprecated": deprecated
+                "deprecated": total - active
             }
-        except Exception as e:
-            print(f"Error getting pipeline stats: {e}")
+        except Exception:
             return {"total": 0, "active": 0, "deprecated": 0}
-    
+
     def get_pipeline_run_stats_by_ids(self, pipeline_ids: List[int]) -> Dict[str, Any]:
-        """Get pipeline run statistics for given pipeline IDs"""
+        if not pipeline_ids:
+            return {"total": 0, "successful": 0, "failed": 0, "success_rate": 0, "avg_duration_formatted": "0m 0s"}
+        
         try:
-            end_date = datetime.now()
-            start_date = end_date - timedelta(days=30)
-            
             stats = self.db.query(
                 func.count(PipelineRun.run_id).label('total'),
                 func.sum(case((PipelineRun.status == "SUCCESS", 1), else_=0)).label('successful'),
                 func.sum(case((PipelineRun.status == "FAILED", 1), else_=0)).label('failed'),
                 func.avg(func.extract('epoch', PipelineRun.end_time - PipelineRun.start_time)).label('avg_duration')
-            ).filter(
-                PipelineRun.pipeline_id.in_(pipeline_ids),
-                PipelineRun.start_time >= start_date,
-                PipelineRun.start_time <= end_date
-            ).first()
+            ).filter(PipelineRun.pipeline_id.in_(pipeline_ids)).first()
             
             total = stats.total or 0
             successful = stats.successful or 0
             failed = stats.failed or 0
             avg_duration = stats.avg_duration or 0
-            success_rate = (successful / total * 100) if total > 0 else 0
             
             return {
                 "total": total,
                 "successful": successful,
                 "failed": failed,
-                "success_rate": round(success_rate, 2),
-                "avg_duration_formatted": self._format_duration(avg_duration)
+                "success_rate": round((successful / total * 100), 2) if total > 0 else 0,
+                "avg_duration_formatted": f"{int(avg_duration // 60)}m {int(avg_duration % 60)}s" if avg_duration > 0 else "0m 0s"
             }
-        except Exception as e:
-            print(f"Error getting run stats: {e}")
+        except Exception:
             return {"total": 0, "successful": 0, "failed": 0, "success_rate": 0, "avg_duration_formatted": "0m 0s"}
-    
+
     def get_recent_pipelines_by_ids(self, limit: int = 5, pipeline_ids: List[int] = None) -> List[Dict[str, Any]]:
-        """Get recent pipelines for given pipeline IDs"""
-        try:
-            query = self.db.query(Pipeline)
-            if pipeline_ids:
-                query = query.filter(Pipeline.pipeline_id.in_(pipeline_ids))
-            
-            pipelines = query.order_by(Pipeline.created_at.desc()).limit(limit).all()
-            
-            result = []
-            for pipeline in pipelines:
-                step_count = len(pipeline.steps) if pipeline.steps else 0
-                result.append({
-                    "pipeline_id": pipeline.pipeline_id,
-                    "name": pipeline.name,
-                    "description": pipeline.description,
-                    "status": "ACTIVE" if not pipeline.is_deprecated else "DEPRECATED",
-                    "created_at": pipeline.created_at.isoformat() if pipeline.created_at else None,
-                    "created_by": pipeline.created_by,
-                    "step_count": step_count
-                })
-            
-            return result
-        except Exception as e:
-            print(f"Error getting recent pipelines: {e}")
+        if not pipeline_ids:
             return []
-    
-    def get_pipeline_creation_trend_by_ids(self, days: int = 30, pipeline_ids: List[int] = None) -> List[Dict[str, Any]]:
-        """Get pipeline creation trend for given pipeline IDs"""
+        
+        try:
+            pipelines = self.db.query(Pipeline).join(User, Pipeline.created_by == User.user_id).filter(
+                Pipeline.pipeline_id.in_(pipeline_ids)
+            ).order_by(desc(Pipeline.created_at)).limit(limit).all()
+            
+            return [
+                {
+                    "pipeline_id": p.pipeline_id,
+                    "name": p.name,
+                    "description": p.description,
+                    "status": "Active" if not p.is_deprecated else "Deprecated",
+                    "created_at": p.created_at.isoformat() if p.created_at else None,
+                    "created_by": p.created_by,
+                    "username": p.owner.username if p.owner else None,
+                    "step_count": len(p.steps) if p.steps else 0
+                }
+                for p in pipelines
+            ]
+        except Exception:
+            return []
+
+    def get_pipeline_creation_trend_by_ids(self, days: int = 7, pipeline_ids: List[int] = None) -> List[Dict[str, Any]]:
+        if not pipeline_ids:
+            return []
+        
         try:
             end_date = datetime.now()
             start_date = end_date - timedelta(days=days)
             
-            query = self.db.query(
+            trend = self.db.query(
                 func.date(Pipeline.created_at).label('date'),
-                func.count(Pipeline.pipeline_id).label('count')
-            ).filter(Pipeline.created_at >= start_date, Pipeline.created_at <= end_date)
-            
-            if pipeline_ids:
-                query = query.filter(Pipeline.pipeline_id.in_(pipeline_ids))
-            
-            results = query.group_by(func.date(Pipeline.created_at)).all()
-            
-            trend_data = []
-            for result in results:
-                if result.date:
-                    trend_data.append({
-                        "date": result.date.isoformat(),
-                        "count": result.count
-                    })
-            
-            return trend_data
-        except Exception as e:
-            print(f"Error getting creation trend: {e}")
-            return []
-    
-    def get_pipeline_status_distribution_by_ids(self, pipeline_ids: List[int] = None) -> List[Dict[str, Any]]:
-        """Get pipeline status distribution for given pipeline IDs"""
-        try:
-            query = self.db.query(
-                case((Pipeline.is_deprecated == True, "DEPRECATED"), else_="ACTIVE").label('status'),
-                func.count(Pipeline.pipeline_id).label('count')
-            )
-            
-            if pipeline_ids:
-                query = query.filter(Pipeline.pipeline_id.in_(pipeline_ids))
-            
-            results = query.group_by(case((Pipeline.is_deprecated == True, "DEPRECATED"), else_="ACTIVE")).all()
-            
-            distribution = []
-            for result in results:
-                distribution.append({
-                    "status": result.status,
-                    "count": result.count
-                })
-            
-            return distribution
-        except Exception as e:
-            print(f"Error getting status distribution: {e}")
-            return []
-    
-    def get_success_failure_distribution_by_ids(self, pipeline_ids: List[int] = None) -> List[Dict[str, Any]]:
-        """Get success/failure distribution for given pipeline IDs"""
-        try:
-            end_date = datetime.now()
-            start_date = end_date - timedelta(days=30)
-            
-            query = self.db.query(
-                PipelineRun.status,
-                func.count(PipelineRun.run_id).label('count')
+                func.count(Pipeline.pipeline_id).label('pipelines_created')
             ).filter(
-                PipelineRun.start_time >= start_date,
-                PipelineRun.start_time <= end_date
-            )
+                Pipeline.created_at >= start_date,
+                Pipeline.created_at <= end_date,
+                Pipeline.pipeline_id.in_(pipeline_ids)
+            ).group_by(func.date(Pipeline.created_at)).order_by(func.date(Pipeline.created_at)).all()
             
-            if pipeline_ids:
-                query = query.filter(PipelineRun.pipeline_id.in_(pipeline_ids))
-            
-            results = query.group_by(PipelineRun.status).all()
-            
-            distribution = []
-            for result in results:
-                if result.status in ["SUCCESS", "FAILED"]:
-                    distribution.append({
-                        "status": result.status,
-                        "count": result.count
-                    })
-            
-            return distribution
-        except Exception as e:
-            print(f"Error getting success/failure distribution: {e}")
+            return [
+                {
+                    "date": stat.date.isoformat() if stat.date else None,
+                    "pipelines_created": stat.pipelines_created
+                }
+                for stat in trend
+            ]
+        except Exception:
             return []
 
+    def get_pipeline_status_distribution_by_ids(self, pipeline_ids: List[int] = None) -> List[Dict[str, Any]]:
+        if not pipeline_ids:
+            return [{"status": "Active", "count": 0}, {"status": "Deprecated", "count": 0}]
+        
+        try:
+            status_counts = self.db.query(
+                Pipeline.is_deprecated,
+                func.count(Pipeline.pipeline_id).label('count')
+            ).filter(Pipeline.pipeline_id.in_(pipeline_ids)).group_by(Pipeline.is_deprecated).all()
+            
+            result = [{"status": "Active" if not status else "Deprecated", "count": count} for status, count in status_counts]
+            return result if result else [{"status": "Active", "count": 0}, {"status": "Deprecated", "count": 0}]
+        except Exception:
+            return [{"status": "Active", "count": 0}, {"status": "Deprecated", "count": 0}]
+
+    def get_success_failure_distribution_by_ids(self, pipeline_ids: List[int] = None) -> List[Dict[str, Any]]:
+        if not pipeline_ids:
+            return [{"status": "SUCCESS", "count": 0, "color": "#05BAEE"}, {"status": "FAILED", "count": 0, "color": "#D6007F"}]
+        
+        try:
+            stats = self.db.query(
+                func.sum(case((PipelineRun.status == "SUCCESS", 1), else_=0)).label('successful'),
+                func.sum(case((PipelineRun.status == "FAILED", 1), else_=0)).label('failed')
+            ).filter(PipelineRun.pipeline_id.in_(pipeline_ids)).first()
+            
+            return [
+                {"status": "SUCCESS", "count": stats.successful or 0, "color": "#05BAEE"},
+                {"status": "FAILED", "count": stats.failed or 0, "color": "#D6007F"}
+            ]
+        except Exception:
+            return [{"status": "SUCCESS", "count": 0, "color": "#05BAEE"}, {"status": "FAILED", "count": 0, "color": "#D6007F"}]

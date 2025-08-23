@@ -23,11 +23,9 @@ const useAuthStore = create(
           const response = await userAPI.login(credentials)
           const access_token = response.access_token
 
-          // Store the token first
           localStorage.setItem('token', access_token)
           localStorage.setItem('login_status', 'loggedin')
 
-          // Fetch user information from backend to get accurate role data
           const user = await userAPI.getCurrentUser()
 
           localStorage.setItem('user', JSON.stringify(user))
@@ -72,7 +70,6 @@ const useAuthStore = create(
 
         if (token && loginStatus === 'loggedin') {
           try {
-            // Fetch user information from backend to get accurate role data
             const userData = await userAPI.getCurrentUser()
             
             if (userData) {
@@ -128,17 +125,7 @@ const useAuthStore = create(
         const user = get().user
         if (!user) return false
         
-        // Check both role and mapped_role fields for compatibility
-        const isAdminUser = user?.role === 'admin' || user?.mapped_role === 'admin'
-        
-        // Debug logging for role detection
-        console.log('AuthStore - isAdmin check:', {
-          user: user,
-          role: user?.role,
-          mapped_role: user?.mapped_role,
-          result: isAdminUser
-        })
-        
+        const isAdminUser = user?.role === 'admin' || user?.mapped_role === 'admin'        
         return isAdminUser
       },
 

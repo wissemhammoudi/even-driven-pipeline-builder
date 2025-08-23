@@ -20,15 +20,7 @@ const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
   const location = useLocation()
-  const { user, logout, isAdmin } = useAuthStore()
-
-  // Enhanced debug logging
-  console.log('Sidebar - Current user:', user);
-  console.log('Sidebar - isAdmin() result:', isAdmin());
-  console.log('Sidebar - User role:', user?.role);
-  console.log('Sidebar - User mapped_role:', user?.mapped_role);
-  console.log('Sidebar - User object keys:', user ? Object.keys(user) : 'No user');
-  
+  const { user, logout, isAdmin } = useAuthStore()  
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
     ...(isAdmin()

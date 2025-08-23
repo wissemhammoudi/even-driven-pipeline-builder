@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from pydantic import Field
+from typing import List
 from source.schema.user.schemas import UserRole
 
 class DatabaseConfig(BaseSettings):
@@ -29,25 +30,24 @@ class KeycloakConfig(BaseSettings):
     client_secret: str = Field(env="KEYCLOAK_CLIENT_SECRET", default="your-client-secret-here")
     admin_username: str = Field(env="KEYCLOAK_ADMIN_USERNAME", default="admin")
     admin_password: str = Field(env="KEYCLOAK_ADMIN_PASSWORD", default="admin")
+    redirect_uris: List[str] = Field(env="KEYCLOAK_REDIRECT_URIS", default=["http://localhost:3000/*", "http://localhost:3001/*"])
+    web_origins: List[str] = Field(env="KEYCLOAK_WEB_ORIGINS", default=["http://localhost:3000", "http://localhost:3001"])
+    realm_display_name: str = Field(env="KEYCLOAK_REALM_DISPLAY_NAME", default="Pipeline Realm")
     
     @property
     def admin_realm(self) -> str:
-        """Get the admin realm - always use master for admin operations"""
         return "master"
     
     @property 
     def app_realm(self) -> str:
-        """Get the application realm - separate from admin realm"""
         return self.keycloak_realm
     
     @property
     def server_url(self) -> str:
-        """Get the server URL for Keycloak operations"""
         return self.keycloak_url
     
     @property
     def realm_name(self) -> str:
-        """Get the realm name for Keycloak operations"""
         return self.keycloak_realm
 
 class GitHubConfig(BaseSettings):
@@ -83,7 +83,7 @@ class ApplicationUserInitConfig(BaseSettings):
     admin_password: str = Field(env="admin_password", default="admin123")
     admin_role: str = Field(env="admin_role", default="admin")
     admin_first_name: str = Field(env="admin_first_name", default="Admin")
-    admin_last_name: str = Field(env="admin_last_name", default="User")
+    admin_last_name: str = Field(env="admin_last_name", default="Admin")
     
     user_username: str = Field(env="user_username", default="user123")
     user_email: str = Field(env="user_email", default="user@example.com")
@@ -91,6 +91,17 @@ class ApplicationUserInitConfig(BaseSettings):
     user_role: str = Field(env="user_role", default="user")
     user_first_name: str = Field(env="user_first_name", default="Regular")
     user_last_name: str = Field(env="user_last_name", default="User")
+    
+    demo_users: List[Dict[str, str]] = Field(env="demo_users", default=[
+        {
+            "username": "user",
+            "email": "user@example.com",
+            "first_name": "Regular",
+            "last_name": "User",
+            "password": "user123",
+            "role": "user"
+        }
+    ])
 
 
 class ExternalServicesConfig(BaseSettings):

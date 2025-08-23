@@ -56,7 +56,6 @@ export const handleApiError = error => {
   }
 }
 
-// Utility function to check if user has required role
 export const hasRequiredRole = (userRole, requiredRole) => {
   if (requiredRole === 'admin') {
     return userRole === 'admin'
@@ -66,7 +65,6 @@ export const hasRequiredRole = (userRole, requiredRole) => {
   return false
 }
 
-// Utility function to get user role from localStorage
 export const getUserRole = () => {
   try {
     const user = JSON.parse(localStorage.getItem('user') || '{}')

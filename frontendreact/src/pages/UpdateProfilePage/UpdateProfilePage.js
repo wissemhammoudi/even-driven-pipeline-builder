@@ -24,7 +24,6 @@ const UpdateProfilePage = () => {
           console.log('User data response:', response)
           if (response) {
             setFullUserData(response)
-            // Update the auth store with complete user data
             setUser(response)
           }
         } catch (error) {
