@@ -5,6 +5,7 @@ services:
     container_name: backend
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./source:/app/source"
     ports:
       - "8010:8010"
     depends_on:

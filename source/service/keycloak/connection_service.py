@@ -13,7 +13,6 @@ class KeycloakConnectionService:
             if not self.session:
                 return {"reachable": False, "error": "No session available"}
             
-            # Test the health endpoint
             health_url = f"{self.config.server_url}/realms/master"
             async with self.session.get(health_url, timeout=aiohttp.ClientTimeout(total=10)) as response:
                 return {"reachable": response.status == 200}

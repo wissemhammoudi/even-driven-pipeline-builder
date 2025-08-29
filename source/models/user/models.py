@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, DateTime, Boolean, Enum
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timezone
 from source.repository.database import Base
 from source.schema.user.schemas import UserRole
 
@@ -15,8 +15,8 @@ class User(Base):
     last_name = Column(String(50), nullable=True, comment="User's last name")
     role = Column(Enum(UserRole, name="user_role"), default=UserRole.user, nullable=False, comment="User role in the system")
     is_deleted = Column(Boolean, default=False, nullable=False, comment="Soft delete flag")
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, comment="User creation timestamp")
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False, comment="Last update timestamp")
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, comment="User creation timestamp")
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False, comment="Last update timestamp")
 
     pipelines = relationship("Pipeline", back_populates="owner", cascade="all, delete-orphan")
     pipeline_runs = relationship("PipelineRun", back_populates="creator", cascade="all, delete-orphan")

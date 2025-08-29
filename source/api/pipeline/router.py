@@ -8,16 +8,15 @@ from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError
 from source.schema.pipeline.schema import PostgreSQLMetadataRequest
 from source.service.PipelineManager.sourceTablesMetadata import PostgreSQLSourceMetadata  
-from datetime import datetime
 from source.service.user.services import UserService
 from source.schema.user.schemas import UserRole     
-from source.service.authentication.keycloak_auth import get_current_user, require_user_role, require_admin_role 
+from source.service.authentication.keycloak_auth import KeycloakAuthService
 pipeline_router = APIRouter(prefix=f"{api_config.api_prefix}/pipeline")
 
 @pipeline_router.post("/schema")
 def get_postgresql_schema_info(
     metadata_req: PostgreSQLMetadataRequest,
-    current_user: dict = Depends(require_user_role)
+    current_user: dict = Depends(KeycloakAuthService.require_user_role)
 ):
     try:
         source = PostgreSQLSourceMetadata(
@@ -45,7 +44,7 @@ def list_pipelines(
     created_date: str = None,
     PipelineService: PipelineService = Depends(PipelineService),
     UserService: UserService = Depends(UserService),
-    current_user: dict = Depends(require_user_role)
+    current_user: dict = Depends(KeycloakAuthService.require_user_role)
     ):
     try:
         user = UserService.get_user_by_id(user_id)
@@ -70,7 +69,7 @@ def list_pipelines(
 def get_pipeline_by_id(
     pipeline_id: int, 
     PipelineService: PipelineService = Depends(PipelineService),
-    current_user: dict = Depends(require_user_role)
+    current_user: dict = Depends(KeycloakAuthService.require_user_role)
 ):
     try:
         return PipelineService.get_pipline_by_id(pipeline_id)
@@ -84,7 +83,7 @@ def create_pipeline(
     pipeline_data: PipelineCreate, 
     pipeline_service: PipelineService = Depends(PipelineService),
     user_service: UserService = Depends(UserService),
-    current_user: dict = Depends(require_admin_role)
+    current_user: dict = Depends(KeycloakAuthService.require_admin_role)
 ):
     try:
         # Verify the user exists and has admin role
@@ -135,7 +134,7 @@ def create_pipeline(
 def delete_pipeline(
     pipeline_id: int, 
     PipelineService: PipelineService = Depends(PipelineService),
-    current_user: dict = Depends(require_admin_role)
+    current_user: dict = Depends(KeycloakAuthService.require_admin_role)
 ):
     try:
         PipelineService.delete_pipeline(PipelineDelete(pipeline_id=pipeline_id))
@@ -149,7 +148,7 @@ def delete_pipeline(
 def get_pipeline_steps(
     pipeline_id: int, 
     PipelineService: PipelineService = Depends(PipelineService),
-    current_user: dict = Depends(require_user_role)
+    current_user: dict = Depends(KeycloakAuthService.require_user_role)
 ):
     try:
         return PipelineService.get_pipeline_steps(pipeline_id)
@@ -162,7 +161,7 @@ def get_pipeline_steps(
 def get_pipeline_steps_details(
     pipeline_id: int, 
     PipelineService: PipelineService = Depends(PipelineService),
-    current_user: dict = Depends(require_user_role)
+    current_user: dict = Depends(KeycloakAuthService.require_user_role)
 ):
     try:
         return PipelineService.get_pipeline_steps_details(pipeline_id)
@@ -175,7 +174,7 @@ def get_pipeline_steps_details(
 def add_step_to_pipeline(
     step_data: StepAdd, 
     PipelineService: PipelineService = Depends(PipelineService),
-    current_user: dict = Depends(require_admin_role)
+    current_user: dict = Depends(KeycloakAuthService.require_admin_role)
 ):
     try:
         return PipelineService.add_step_to_pipeline(step_data)
@@ -190,7 +189,7 @@ def add_step_to_pipeline(
 def delete_steps_from_pipeline(
     step_data: StepDelete, 
     PipelineService: PipelineService = Depends(PipelineService),
-    current_user: dict = Depends(require_admin_role)
+    current_user: dict = Depends(KeycloakAuthService.require_admin_role)
 ):
     try:
         return PipelineService.delete_steps_from_pipeline(step_data)
@@ -205,7 +204,7 @@ def delete_steps_from_pipeline(
 def update_pipeline(
     pipeline_data: PipelineUpdate,
     PipelineService: PipelineService = Depends(PipelineService),
-    current_user: dict = Depends(require_admin_role)
+    current_user: dict = Depends(KeycloakAuthService.require_admin_role)
 ):
     try:
         return PipelineService.update_pipeline(pipeline_data)

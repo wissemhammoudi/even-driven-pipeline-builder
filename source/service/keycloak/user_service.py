@@ -1,6 +1,6 @@
 import asyncio
 import aiohttp
-from typing import Optional, List
+from typing import Optional
 from source.config.config import keycloak_config, application_user_init_config
 from source.models.user.models import User
 from source.schema.user.schemas import UserRole
@@ -231,7 +231,7 @@ class KeycloakUserService:
         except Exception as e:
             return None
 
-    async def update_user(self, user_id: str, username: str = None, email: str = None, first_name: str = None, last_name: str = None) -> bool:
+    async def update_user(self, user_id: str, username: str = None, email: str = None, first_name: str = None, last_name: str = None, role: str = None) -> bool:
         try:
             admin_token = await self.setup_service.get_admin_token()
             if not admin_token:
@@ -258,10 +258,52 @@ class KeycloakUserService:
             user_url = f"{self.config.server_url}/admin/realms/{self.config.realm_name}/users/{user_id}"
             async with self.session.put(user_url, headers=headers, json=update_data, timeout=aiohttp.ClientTimeout(total=30)) as response:
                 if response.status == 204:
+                    # If role is provided, update the user's role
+                    if role is not None:
+                        await self.update_user_role(user_id, role)
                     return True
                 else:
                     return False
                     
+        except asyncio.TimeoutError:
+            return False
+        except Exception as e:
+            return False
+
+    async def update_user_role(self, user_id: str, role: str) -> bool:
+
+        try:
+            admin_token = await self.setup_service.get_admin_token()
+            if not admin_token:
+                return False
+            
+            headers = {
+                "Authorization": f"Bearer {admin_token}",
+                "Content-Type": "application/json"
+            }
+            
+            role_url = f"{self.config.server_url}/admin/realms/{self.config.realm_name}/roles/{role}"
+            async with self.session.get(role_url, headers=headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
+                if response.status != 200:
+                    return False
+                
+                role_data = await response.json()
+                role_id = role_data.get("id")
+                
+                if not role_id:
+                    return False
+            
+            user_roles_url = f"{self.config.server_url}/admin/realms/{self.config.realm_name}/users/{user_id}/role-mappings/realm"
+            async with self.session.delete(user_roles_url, headers=headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
+                if response.status not in [200, 204]:
+                    return False
+            
+            add_role_url = f"{self.config.server_url}/admin/realms/{self.config.realm_name}/users/{user_id}/role-mappings/realm"
+            role_mapping = [{"id": role_id, "name": role}]
+            
+            async with self.session.post(add_role_url, headers=headers, json=role_mapping, timeout=aiohttp.ClientTimeout(total=30)) as response:
+                return response.status in [200, 204]
+                
         except asyncio.TimeoutError:
             return False
         except Exception as e:
@@ -280,9 +322,11 @@ class KeycloakUserService:
             
             user_url = f"{self.config.server_url}/admin/realms/{self.config.realm_name}/users/{user_id}"
             async with self.session.delete(user_url, headers=headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
+                
                 if response.status == 204:
                     return True
                 else:
+                    response_text = await response.text()
                     return False
                     
         except asyncio.TimeoutError:

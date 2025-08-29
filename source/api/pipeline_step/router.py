@@ -1,14 +1,9 @@
 from fastapi import APIRouter, status, HTTPException, Depends
-from typing import List
-from source.schema.pipeline_step.schema import PipelineStepCreate, PipelineStepUpdate, PipelineStepResponse
+from source.schema.pipeline_step.schema import PipelineStepCreate, PipelineStepUpdate
 from source.service.pipeline_step.service import PipelineStepService
 from source.exceptions.exceptions import StepNotFoundError
 from source.config.config import api_config
-from pydantic import ValidationError
-from sqlalchemy.exc import IntegrityError
-from source.service.user.services import UserService
-from source.schema.user.schemas import UserRole     
-from source.service.authentication.keycloak_auth import get_current_user, require_user_role, require_admin_role 
+from source.service.authentication.keycloak_auth import KeycloakAuthService
 
 step_router = APIRouter(prefix=f"{api_config.api_prefix}/steps")
 
@@ -16,7 +11,7 @@ step_router = APIRouter(prefix=f"{api_config.api_prefix}/steps")
 def create_step(
     data: PipelineStepCreate, 
     step_service: PipelineStepService = Depends(PipelineStepService),
-    current_user: dict = Depends(require_admin_role)
+    current_user: dict = Depends(KeycloakAuthService.require_admin_role)
 ):
     try:
         return step_service.create_step(data)
@@ -27,7 +22,7 @@ def create_step(
 def update_step(
     data: PipelineStepUpdate,
     step_service: PipelineStepService = Depends(PipelineStepService),
-    current_user: dict = Depends(require_admin_role)
+    current_user: dict = Depends(KeycloakAuthService.require_admin_role)
 ):
     try:
         return step_service.update_step(data)
@@ -40,7 +35,7 @@ def update_step(
 def delete_step(
     step_id: int,
     step_service: PipelineStepService = Depends(PipelineStepService),
-    current_user: dict = Depends(require_admin_role)
+    current_user: dict = Depends(KeycloakAuthService.require_admin_role)
 ):
     try:
         step_service.delete_step(step_id)
@@ -54,7 +49,7 @@ def delete_step(
 def list_pipelines_by_pipeline(
     pipeline_id: int,
     step_service: PipelineStepService = Depends(PipelineStepService),
-    current_user: dict = Depends(require_user_role)
+    current_user: dict = Depends(KeycloakAuthService.require_user_role)
 ):
     try:
         return step_service.get_steps_by_pipeline(pipeline_id)

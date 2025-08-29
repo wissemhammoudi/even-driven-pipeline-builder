@@ -1,58 +1,75 @@
 from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from typing import Optional, Dict
-from source.service.keycloak_service import get_keycloak_service
+from typing import Optional, Dict, Any
 from source.schema.user.schemas import UserRole
+from source.service.keycloak_service import get_keycloak_service
 
-security = HTTPBearer()
+
+security = HTTPBearer(auto_error=False)
+
 
 class KeycloakAuthService:
-    """Authentication service using Keycloak"""
     
     def __init__(self):
-        self.keycloak_service = get_keycloak_service()
+        self._keycloak_service = None
+
+    async def _get_keycloak_service(self):
+        if self._keycloak_service is None:
+            self._keycloak_service = await get_keycloak_service()
+        return self._keycloak_service
     
-    async def authenticate_user(self, username: str, password: str) -> Optional[Dict]:
-        """Authenticate user with Keycloak"""
+    async def authenticate_user(self, username: str, password: str) -> Optional[Dict[str, Any]]:
         try:
-            return await self.keycloak_service.authenticate_user(username, password)
-        except Exception as e:
+            keycloak_service = await self._get_keycloak_service()
+            return await keycloak_service.authenticate_user(username, password)
+        except Exception:
             return None
     
-    async def verify_token(self, token: str) -> Optional[Dict]:
-        """Verify JWT token with Keycloak"""
+    async def verify_token(self, token: str) -> Optional[Dict[str, Any]]:
         try:
-            return await self.keycloak_service.verify_token(token)
-        except Exception as e:
+            keycloak_service = await self._get_keycloak_service()
+            return await keycloak_service.verify_token(token)
+        except Exception:
             return None
     
-    async def get_user_info(self, token: str) -> Optional[Dict]:
-        """Get user information from token"""
+    async def get_user_info(self, token: str) -> Optional[Dict[str, Any]]:
         try:
-            return await self.keycloak_service.get_user_info(token)
-        except Exception as e:
+            keycloak_service = await self._get_keycloak_service()
+            return await keycloak_service.get_user_info(token)
+        except Exception:
             return None
     
-    def get_user_role(self, roles: list) -> UserRole:
-        """Map Keycloak roles to application roles"""
+    @staticmethod
+    def get_user_role(roles: list) -> UserRole:
         if not roles:
             return UserRole.viewer
-            
         if "admin" in roles:
             return UserRole.admin
         elif "user" in roles:
             return UserRole.user
-        else:
-            return UserRole.viewer
+        return UserRole.viewer
 
-keycloak_auth_service = KeycloakAuthService()
-
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Dict:
-    """Dependency to get current authenticated user"""
-    try:
-        token = credentials.credentials
-        user_info = await keycloak_auth_service.verify_token(token)
+    @staticmethod
+    async def get_current_user(
+        credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+        keycloak_service: "KeycloakAuthService" = Depends(lambda: keycloak_auth_service),
+    ) -> Dict[str, Any]:
+        if not credentials:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Missing authentication credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
         
+        token = credentials.credentials
+        if not token:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token format",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        user_info = await keycloak_service.verify_token(token)
         if not user_info:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -60,41 +77,37 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
                 headers={"WWW-Authenticate": "Bearer"},
             )
         
+        user_info["mapped_role"] = keycloak_service.get_user_role(user_info.get("roles", []))
         return user_info
-        
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    
+    @staticmethod
+    async def get_current_user_with_role(
+        current_user: Dict[str, Any] = Depends(get_current_user)
+    ) -> Dict[str, Any]:
+        return current_user
 
-async def get_current_user_with_role(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Dict:
-    """Dependency to get current authenticated user with mapped role"""
-    user_info = await get_current_user(credentials)
-    
-    mapped_role = keycloak_auth_service.get_user_role(user_info.get("roles", []))
-    user_info["mapped_role"] = mapped_role
-    
-    return user_info
+    @staticmethod
+    async def require_admin_role(
+        current_user: Dict[str, Any] = Depends(get_current_user_with_role)
+    ) -> Dict[str, Any]:
+        user_role = current_user.get("mapped_role")
+        if user_role != UserRole.admin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Admin role required. Current role: {user_role}"
+            )
+        return current_user
 
-async def require_admin_role(current_user: Dict = Depends(get_current_user_with_role)) -> Dict:
-    """Dependency to require admin role"""
-    user_role = current_user.get("mapped_role")
-    
-    if user_role != UserRole.admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Admin role required. Current role: {user_role}"
-        )
-    
-    return current_user
+    @staticmethod
+    async def require_user_role(
+        current_user: Dict[str, Any] = Depends(get_current_user_with_role)
+    ) -> Dict[str, Any]:
+        if current_user.get("mapped_role") not in [UserRole.user, UserRole.admin]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User role required"
+            )
+        return current_user
 
-async def require_user_role(current_user: Dict = Depends(get_current_user_with_role)) -> Dict:
-    """Dependency to require user or admin role"""
-    if current_user.get("mapped_role") not in [UserRole.user, UserRole.admin]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User role required"
-        )
-    return current_user
+
+keycloak_auth_service = KeycloakAuthService()

@@ -17,7 +17,9 @@ apiClient.interceptors.request.use(
 )
 
 apiClient.interceptors.response.use(
-  response => response,
+  response => {
+    return response
+  },
   error => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token')
@@ -25,9 +27,7 @@ apiClient.interceptors.response.use(
       localStorage.setItem('login_status', 'loggedout')
       window.location.href = '/login'
     } else if (error.response?.status === 403) {
-      console.error('Access denied: Insufficient permissions')
     } else if (error.response?.status === 500) {
-      console.error('Server error:', error.response.data)
     }
     return Promise.reject(error)
   }

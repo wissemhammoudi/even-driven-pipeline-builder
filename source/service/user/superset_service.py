@@ -1,12 +1,9 @@
-import logging
-from typing import Optional
+from typing import Optional, Dict
 from source.schema.user.schemas import UserRole
 from source.config.config import superset_config
 from source.service.PipelineManager.supersetclient import SupersetClient
 from source.service.user_superset_account_association.service import UserSupersetAccountAssociationService
 
-# Configure logging
-logger = logging.getLogger(__name__)
 
 class UserSupersetService:
     def __init__(self):
@@ -17,69 +14,97 @@ class UserSupersetService:
         )
         self.user_superset_account_association_service = UserSupersetAccountAssociationService()
     
-    def create_user(self, username: str, email: str, first_name: str, last_name: str, role: UserRole) -> Optional[int]:
-        """
-        Create user in Superset and return the user ID
-        
-        Args:
-            username: User's username
-            email: User's email
-            first_name: User's first name
-            last_name: User's last name
-            role: User's role
+    def _get_superset_roles(self) -> Dict[str, int]:
+
+        try:
+            if not self.superset_client.authenticate():
+                raise Exception("Failed to authenticate with Superset to get roles")
             
-        Returns:
-            Superset user ID if successful, None otherwise
-        """
+            roles_url = f"{self.superset_client.base_url}/api/v1/security/roles/"
+            response = self.superset_client.session.get(
+                roles_url,
+                headers={'Authorization': f'Bearer {self.superset_client.access_token}'}
+            )
+            
+            if response.status_code == 200:
+                roles_data = response.json()
+                roles = {}
+                
+                if 'result' in roles_data:
+                    for role in roles_data['result']:
+                        role_name = role.get('name', '').lower()
+                        role_id = role.get('id')
+                        if role_id is not None:
+                            roles[role_name] = role_id
+                return roles
+            else:
+                return {}
+                
+        except Exception as e:
+            raise Exception(f"Error getting Superset roles: {str(e)}")
+
+    def create_user(self, username: str, email: str, first_name: str, last_name: str, role: UserRole) -> Optional[int]:
+
         try:
             if not username or not email:
-                logger.error("Username and email are required for Superset user creation")
-                return None
+                raise Exception("Username and email are required for Superset user creation")
                 
-            logger.info(f"Creating user {username} in Superset")
+            if not self.superset_client.authenticate():
+                raise Exception(f"Failed to authenticate with Superset for user creation: {username}")
             
-            # Determine Superset roles based on user role
+            superset_roles = self._get_superset_roles()
+            
             if role == UserRole.admin:
-                superset_roles = [superset_config.superset_admin_role_id]
-                logger.debug(f"Assigning admin role to user {username}")
+                if superset_roles.get('admin'):
+                    role_id = superset_roles['admin']
+                else:
+                    role_id = superset_config.superset_admin_role_id
+                superset_roles = [role_id]
             else:
-                superset_roles = [superset_config.superset_gamma_role_id]
-                logger.debug(f"Assigning gamma role to user {username}")
+                if superset_roles.get('gamma'):
+                    role_id = superset_roles['gamma']
+                else:
+                    role_id = superset_config.superset_gamma_role_id
+                superset_roles = [role_id]
+            
+            try:
+                role_check_url = f"{self.superset_client.base_url}/api/v1/security/roles/{superset_roles[0]}"
+                role_response = self.superset_client.session.get(
+                    role_check_url,
+                    headers={'Authorization': f'Bearer {self.superset_client.access_token}'}
+                )
+                if role_response.status_code != 200:
+                    raise Exception(f"Role ID {superset_roles[0]} may not exist in Superset (status: {role_response.status_code})")
+            except Exception as e:
+                raise Exception(f"Could not verify role existence: {str(e)}")
             
             superset_user_id = self.superset_client.create_user(
                 username=username,
                 email=email,
                 first_name=first_name or "",
                 last_name=last_name or "",
-                password=username,  # Using username as initial password
+                password=username,
                 roles=superset_roles,
                 active=True
             )
             
             if superset_user_id:
-                logger.info(f"User {username} created successfully in Superset with ID: {superset_user_id}")
                 return superset_user_id
             else:
-                logger.error(f"Failed to create user {username} in Superset - no user ID returned")
+                try:
+                    existing_user = self.superset_client.get_user_id(username)
+                    if existing_user:
+                        return existing_user
+                except Exception as e:
+                    raise Exception(f"Could not check for existing user: {str(e)}")
                 return None
                 
         except Exception as e:
-            logger.error(f"Failed to create user {username} in Superset: {str(e)}")
             return None
     
     def create_admin_user(self, username: str, email: str) -> Optional[int]:
-        """
-        Create admin user in Superset
-        
-        Args:
-            username: Admin username
-            email: Admin email
-            
-        Returns:
-            Superset user ID if successful, None otherwise
-        """
+
         try:
-            logger.info(f"Creating admin user {username} in Superset")
             return self.create_user(
                 username=username,
                 email=email,
@@ -88,22 +113,11 @@ class UserSupersetService:
                 role=UserRole.admin
             )
         except Exception as e:
-            logger.error(f"Failed to create admin user {username} in Superset: {str(e)}")
-            return None
+            raise Exception(f"Failed to create admin user {username} in Superset: {str(e)}")
     
     def create_regular_user(self, username: str, email: str) -> Optional[int]:
-        """
-        Create regular user in Superset
-        
-        Args:
-            username: Regular user username
-            email: Regular user email
-            
-        Returns:
-            Superset user ID if successful, None otherwise
-        """
+
         try:
-            logger.info(f"Creating regular user {username} in Superset")
             return self.create_user(
                 username=username,
                 email=email,
@@ -112,35 +126,20 @@ class UserSupersetService:
                 role=UserRole.user
             )
         except Exception as e:
-            logger.error(f"Failed to create regular user {username} in Superset: {str(e)}")
-            return None
+            raise Exception(f"Failed to create regular user {username} in Superset: {str(e)}")
     
     def add_user_association(self, user_id: str, superset_user_id: int) -> bool:
-        """
-        Add association between local user and Superset user
-        
-        Args:
-            user_id: Local user ID
-            superset_user_id: Superset user ID
-            
-        Returns:
-            True if association successful, False otherwise
-        """
+
         try:
             if not user_id or not superset_user_id:
-                logger.error("Both user_id and superset_user_id are required for association")
-                return False
+                raise Exception("Both user_id and superset_user_id are required for association")
                 
-            logger.info(f"Adding association between local user {user_id} and Superset user {superset_user_id}")
-            
             self.user_superset_account_association_service.add_association(
                 user_id=user_id, 
                 superset_user_id=superset_user_id
             )
             
-            logger.info(f"Association added successfully between local user {user_id} and Superset user {superset_user_id}")
             return True
             
         except Exception as e:
-            logger.error(f"Failed to add association between local user {user_id} and Superset user {superset_user_id}: {str(e)}")
-            return False
+            raise Exception(f"Failed to add association between local user {user_id} and Superset user {superset_user_id}: {str(e)}")

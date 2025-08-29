@@ -93,11 +93,12 @@ class LoginSchema(BaseModel):
 
 class UserUpdate(BaseModel):
     """Schema for updating user information"""
-    user_id: str = Field(..., description="User ID to update")
+    user_id: Optional[str] = Field(None, description="User ID to update (set by router)")
     username: Optional[str] = Field(None, min_length=3, max_length=50, description="New username")
-    email: Optional[EmailStr] = Field(None, description="New email address")
+    email: Optional[str] = Field(None, description="New email address")
     first_name: Optional[str] = Field(None, max_length=50, description="New first name")
     last_name: Optional[str] = Field(None, max_length=50, description="New last name")
+    role: Optional[UserRole] = Field(None, description="New user role")
     
     model_config = ConfigDict(
         str_strip_whitespace=True,
@@ -110,6 +111,20 @@ class UserUpdate(BaseModel):
         """Convert empty strings to None for optional fields"""
         if isinstance(v, str) and v.strip() == "":
             return None
+        return v
+    
+    @field_validator('role', mode='before')
+    @classmethod
+    def validate_role(cls, v):
+        """Validate and normalize user role"""
+        if isinstance(v, str):
+            v = v.lower().strip()
+            if v == "admin":
+                return UserRole.admin
+            elif v == "user":
+                return UserRole.user
+            else:
+                raise ValueError(f'Invalid role: {v}. Must be "user" or "admin"')
         return v
 
 class Token(BaseModel):
