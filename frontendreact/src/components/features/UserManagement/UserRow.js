@@ -92,7 +92,25 @@ const UserRow = ({
           </div>
         </td>
         <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>
-          {new Date(user.created_at).toLocaleDateString()}
+          {(() => {
+            // Debug: Log the actual value
+            console.log('User created_at:', user.created_at, 'Type:', typeof user.created_at);
+            
+            if (!user.created_at) {
+              return <span className="text-gray-400 italic">Not available</span>
+            }
+            
+            try {
+              const date = new Date(user.created_at)
+              if (isNaN(date.getTime())) {
+                return <span className="text-gray-400 italic">Invalid date</span>
+              }
+              return date.toLocaleDateString()
+            } catch (error) {
+              console.error('Date parsing error:', error, 'Value:', user.created_at);
+              return <span className="text-gray-400 italic">Date error</span>
+            }
+          })()}
         </td>
         <td className='px-6 py-4 whitespace-nowrap text-right text-sm font-medium'>
           <div className='flex items-center justify-end space-x-2'>

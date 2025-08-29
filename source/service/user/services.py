@@ -7,6 +7,8 @@ from source.models.user.models import User
 from source.service.authentication.keycloak_auth import keycloak_auth_service
 from .superset_service import UserSupersetService
 from .initialization_service import UserInitializationService
+from datetime import datetime, timezone
+
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -69,7 +71,9 @@ class UserService:
                 email=user_data.email,
                 first_name=user_data.first_name,
                 last_name=user_data.last_name,
-                role=user_data.role or UserRole.user
+                role=user_data.role or UserRole.user,
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
             )
             created_user = self.user_repository.create_user(user)
             logger.info(f"✅ User created in local database: {created_user.username}")

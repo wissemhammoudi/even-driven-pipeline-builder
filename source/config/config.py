@@ -1,6 +1,6 @@
 from pydantic_settings import BaseSettings
 from pydantic import Field
-from typing import List
+from typing import List, Dict
 from source.schema.user.schemas import UserRole
 
 class DatabaseConfig(BaseSettings):
@@ -51,7 +51,7 @@ class KeycloakConfig(BaseSettings):
         return self.keycloak_realm
 
 class GitHubConfig(BaseSettings):
-    github_token: str = Field(env="github_token", default="your-github-token-here")
+    github_token: str = Field(env="github_token", default="your_github_token_here")
     github_username: str = Field(env="github_username", default="wissemHammoudi1")
     github_email: str = Field(env='github_email', default="wissem.hammoudi@elyadata.com")
 
@@ -61,9 +61,9 @@ class DockerConfig(BaseSettings):
     Docker_Client_Base_Url: str = Field(env="Docker_Client_Base_Url", default="unix://var/run/docker.sock")
 
 class SupersetConfig(BaseSettings):
-    superset_secret_key: str = Field(env="superset_secret_key", default="your-superset-secret-key-here")
+    superset_secret_key: str = Field(env="superset_secret_key", default="admin")
     superset_user: str = Field(env="superset_user", default="admin")
-    superset_password: str = Field(env="superset_password", default="your-superset-password-here")
+    superset_password: str = Field(env="superset_password", default="admin")
     superset_sqlalchemy_uri: str = Field(env="superset_sqlalchemy_uri", default="postgresql://user:password@postgres:5432/postgres")
     superset_url: str = Field(env="superset_url", default="http://superset:8088")
     superset_user_url: str = Field(env="superset_url", default="http://localhost:8088")
@@ -107,7 +107,6 @@ class ApplicationUserInitConfig(BaseSettings):
 class ExternalServicesConfig(BaseSettings):
     n8n_webhook_Url: str = Field(env="n8n_webhook_Url", default="http://n8n:5678/webhook/sql-transformation")
     
-# Configuration instances
 application_user_init_config = ApplicationUserInitConfig()
 external_services_config = ExternalServicesConfig()
 api_config = APIConfig()
