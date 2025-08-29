@@ -54,7 +54,7 @@ Base.metadata.create_all(bind=engine)
 async def startup_event():
     """Run startup tasks"""
     try:
-        keycloak_service = get_keycloak_service()     
+        keycloak_service = await get_keycloak_service()     
         keycloak_ready = await keycloak_service.wait_for_ready(max_attempts=15, delay=3.0)
         if not keycloak_ready:
             return        
@@ -93,7 +93,7 @@ async def health_check():
 async def auth_status():
     """Check authentication service status"""
     try:
-        keycloak_service = get_keycloak_service()
+        keycloak_service = await get_keycloak_service()
         connection_test = await keycloak_service.test_connection()
         return {
             "keycloak_status": "connected" if connection_test["reachable"] else "disconnected",

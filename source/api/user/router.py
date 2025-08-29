@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, status, HTTPException, Depends
 from typing import List
 from source.schema.user.schemas import UserCreate, UserUpdate, UserResponse, PasswordUpdate, LoginSchema, BulkUserDelete, PaginatedUserResponse
@@ -7,18 +8,21 @@ from source.config.config import api_config
 from pydantic import ValidationError, BaseModel
 from sqlalchemy.exc import IntegrityError
 from source.schema.user.schemas import UserRole     
-from source.service.authentication.keycloak_auth import get_current_user, require_user_role, require_admin_role 
+from source.service.authentication.keycloak_auth import get_current_user, require_user_role, require_admin_role
+
+# Configure logging
+logger = logging.getLogger(__name__) 
 
 user_router = APIRouter(prefix=f"{api_config.api_prefix}/users")
 
 @user_router.post('/signup', status_code=status.HTTP_201_CREATED)
-def signup(
+async def signup(
     user_data: UserCreate,
     user_service: UserService = Depends(UserService),
     current_user: dict = Depends(require_admin_role)
 ):
     try:
-        return user_service.signup(user_data)
+        return await user_service.signup(user_data)
     except DuplicateUserError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
 
@@ -68,13 +72,13 @@ def get_user_by_username(
     except UserNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 @user_router.delete('/{user_id}', status_code=status.HTTP_204_NO_CONTENT)
-def delete_user(
+async def delete_user(
     user_id: str,  
     user_service: UserService = Depends(UserService),
     current_user: dict = Depends(require_admin_role)
 ):
     try:
-        user_service.delete_user(user_id)
+        await user_service.delete_user(user_id)
     except UserNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 @user_router.patch('/password')
@@ -94,8 +98,11 @@ async def update_user(
     user_data: UserUpdate, 
     user_service: UserService = Depends(UserService),
     current_user: dict = Depends(require_user_role)
-):
+):  
     try:
+        # Set the user_id from the current user
+        user_data.user_id = current_user['user_id']
+        
         await user_service.update_user(user_data)
         
         updated_user = user_service.get_user_by_id(user_data.user_id)
@@ -199,6 +206,13 @@ async def update_user_admin(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except DuplicateUserError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+    except ValueError as e:
+        # Handle validation errors
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+    except Exception as e:
+        # Log the actual error for debugging
+        logger.error(f"Unexpected error in update_user_admin: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 @user_router.delete('/admin/{user_id}', status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user_admin(

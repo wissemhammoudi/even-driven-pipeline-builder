@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 class UserRepository:
     def __init__(self):
         pass
-    
+
     def get_user_by_username(self, username: str) -> Optional[User]:
         """
         Get user by username (including deleted users)
@@ -49,7 +49,7 @@ class UserRepository:
             User object or None if not found
         """
         if not email:
-            logger.warning("Attempted to get user with empty email")
+            logger.warning("Attempted to get active user with empty email")
             return None
             
         db = get_db()
@@ -61,17 +61,17 @@ class UserRepository:
                 logger.debug(f"No active user found with email: {email}")
             return user
         except Exception as e:
-            logger.error(f"Error getting user by email {email}: {str(e)}")
+            logger.error(f"Error getting active user by email {email}: {str(e)}")
             raise
         finally:
             db.close()
 
-    def get_user_by_email_and_username(self, email: str, username: str) -> Optional[User]:
+    def get_user_by_email_and_username(self, email: str = None, username: str = None) -> Optional[User]:
         """
-        Get user by email or username (including deleted users)
+        Get user by email and/or username (active users only)
         
         Args:
-            email: User's email
+            email: User's email address
             username: User's username
             
         Returns:
@@ -141,14 +141,26 @@ class UserRepository:
         """
         db = get_db()
         try:
-            users = db.query(User).filter(User.is_deleted == False).all()
-            logger.debug(f"Retrieved {len(users)} active users")
+            logger.info("Retrieving all active users from database...")
+            
+            # Query for active users
+            query = db.query(User).filter(User.is_deleted == False)
+            logger.debug(f"Executing query: {query}")
+            
+            users = query.all()
+            logger.info(f"✅ Retrieved {len(users)} active users from database")
+            
+            # Log user details for debugging
+            for user in users:
+                logger.debug(f"  - {user.username} (ID: {user.user_id}, role: {user.role.value})")
+            
             return users
         except Exception as e:
             logger.error(f"Error getting all active users: {str(e)}")
             raise
         finally:
             db.close()
+            logger.debug("Database session closed")
     
     def get_all_users_filtered(self, search: str = None, role: str = None, limit: int = 100, offset: int = 0) -> Dict[str, Any]:
         """
@@ -166,41 +178,53 @@ class UserRepository:
         # Validate pagination parameters
         if limit <= 0 or limit > 1000:
             limit = 100
-            logger.warning(f"Invalid limit {limit}, using default value 100")
         if offset < 0:
             offset = 0
-            logger.warning(f"Invalid offset {offset}, using default value 0")
             
         db = get_db()
         try:
+            logger.info(f"Retrieving filtered users with search='{search}', role='{role}', limit={limit}, offset={offset}")
+            
+            # Build base query
             query = db.query(User).filter(User.is_deleted == False)
             
+            # Apply search filter if provided
             if search:
-                search_filter = f"%{search}%"
+                search_term = f"%{search}%"
                 query = query.filter(
-                    (User.username.ilike(search_filter)) |
-                    (User.email.ilike(search_filter)) |
-                    (User.first_name.ilike(search_filter)) |
-                    (User.last_name.ilike(search_filter))
+                    (User.username.ilike(search_term)) |
+                    (User.email.ilike(search_term)) |
+                    (User.first_name.ilike(search_term)) |
+                    (User.last_name.ilike(search_term))
                 )
-                logger.debug(f"Applied search filter: {search}")
+                logger.debug(f"Applied search filter: {search_term}")
             
-            if role and role != 'all':
+            # Apply role filter if provided
+            if role:
                 query = query.filter(User.role == role)
                 logger.debug(f"Applied role filter: {role}")
             
+            # Get total count before pagination
             total_count = query.count()
-            users = query.offset(offset).limit(limit).all()
+            logger.debug(f"Total users matching filters: {total_count}")
             
-            logger.debug(f"Retrieved {len(users)} users out of {total_count} total (limit: {limit}, offset: {offset})")
+            # Apply pagination
+            users = query.offset(offset).limit(limit).all()
+            logger.info(f"✅ Retrieved {len(users)} users (page {offset//limit + 1})")
+            
+            # Log user details for debugging
+            for user in users:
+                logger.debug(f"  - {user.username} (ID: {user.user_id}, role: {user.role.value})")
             
             return {
                 "users": users,
-                "total": total_count,
+                "total_count": total_count,
                 "limit": limit,
                 "offset": offset,
-                "has_more": (offset + limit) < total_count
+                "page": (offset // limit) + 1,
+                "total_pages": (total_count + limit - 1) // limit
             }
+            
         except Exception as e:
             logger.error(f"Error getting filtered users: {str(e)}")
             raise
@@ -282,42 +306,135 @@ class UserRepository:
             
         db = get_db()
         try:
-            logger.info(f"Creating user: {user.username} ({user.user_id})")
+            logger.info(f"Creating user in database: {user.username} ({user.user_id})")
+            
+            # Add user to session
             db.add(user)
+            logger.debug("User added to session")
+            
+            # Commit the transaction
             db.commit()
+            logger.debug("Transaction committed")
+            
+            # Refresh the user object to get any auto-generated values
             db.refresh(user)
-            logger.info(f"User {user.username} created successfully")
+            logger.debug("User object refreshed")
+            
+            logger.info(f"✅ User {user.username} created successfully in database")
             return user
+            
         except Exception as e:
-            db.rollback()
             logger.error(f"Error creating user {user.username}: {str(e)}")
+            db.rollback()
+            logger.debug("Transaction rolled back")
             raise
         finally:
             db.close()
+            logger.debug("Database session closed")
 
-    def mark_deleted(self, user: User) -> None:
+    def mark_deleted(self, user_id: str) -> None:
         """
         Mark a user as deleted (soft delete)
         
         Args:
-            user: User object to mark as deleted
+            user_id: User ID to mark as deleted
             
         Raises:
             Exception: If marking as deleted fails
         """
-        if not user:
-            logger.error("Cannot mark deleted: user object is None")
-            raise ValueError("User object cannot be None")
+        if not user_id:
+            logger.error("❌ Cannot mark deleted: user_id is None")
+            raise ValueError("User ID cannot be None")
             
         db = get_db()
         try:
-            logger.info(f"Marking user {user.username} ({user.user_id}) as deleted")
+            logger.info(f"💾 Starting to mark user {user_id} as deleted")
+            
+            # Get the user in the current session
+            user = db.query(User).filter(User.user_id == user_id).first()
+            if not user:
+                logger.error(f"❌ User {user_id} not found")
+                raise ValueError(f"User {user_id} not found")
+            
+            logger.info(f"🔍 Current user state - is_deleted: {user.is_deleted}")
+            
             user.is_deleted = True
+            logger.info(f"✅ User {user.username} marked as deleted in memory")
+            
             db.commit()
-            logger.info(f"User {user.username} marked as deleted successfully")
+            logger.info(f"💾 Database transaction committed for user {user.username}")
+            
+            logger.info(f"🎉 User {user.username} marked as deleted successfully")
         except Exception as e:
+            logger.error(f"❌ Error marking user {user_id} as deleted: {str(e)}")
+            logger.error(f"❌ Error type: {type(e).__name__}")
             db.rollback()
-            logger.error(f"Error marking user {user.username} as deleted: {str(e)}")
+            logger.info(f"🔄 Database transaction rolled back")
+            raise
+        finally:
+            db.close()
+
+    def update_user(self, user_id: str, **kwargs) -> Optional[User]:
+        """
+        Update user fields
+        
+        Args:
+            user_id: User ID to update
+            **kwargs: Fields to update
+            
+        Returns:
+            Updated user object or None if not found
+            
+        Raises:
+            Exception: If update fails
+        """
+        if not user_id:
+            logger.error("❌ Cannot update: user_id is None")
+            raise ValueError("User ID cannot be None")
+            
+        db = get_db()
+        try:
+            logger.info(f"💾 Starting to update user {user_id}")
+            
+            # Get the user in the current session
+            user = db.query(User).filter(User.user_id == user_id).first()
+            if not user:
+                logger.error(f"❌ User {user_id} not found")
+                return None
+            
+            logger.info(f"🔍 Current user state: {user.username}")
+            
+            # Update fields
+            for field, value in kwargs.items():
+                if hasattr(user, field) and value is not None:
+                    # Special handling for role field
+                    if field == 'role' and isinstance(value, str):
+                        # Validate role value
+                        if value.lower() not in ['user', 'admin']:
+                            raise ValueError(f"Invalid role: {value}. Must be 'user' or 'admin'")
+                        # Convert to proper enum value
+                        from source.schema.user.schemas import UserRole
+                        if value.lower() == 'admin':
+                            value = UserRole.admin
+                        else:
+                            value = UserRole.user
+                    
+                    setattr(user, field, value)
+                    logger.info(f"✅ Updated {field} to {value}")
+            
+            db.commit()
+            logger.info(f"💾 Database transaction committed for user {user.username}")
+            
+            # Refresh to get updated values
+            db.refresh(user)
+            logger.info(f"🎉 User {user.username} updated successfully")
+            
+            return user
+        except Exception as e:
+            logger.error(f"❌ Error updating user {user_id}: {str(e)}")
+            logger.error(f"❌ Error type: {type(e).__name__}")
+            db.rollback()
+            logger.info(f"🔄 Database transaction rolled back")
             raise
         finally:
             db.close()
@@ -336,6 +453,20 @@ class UserRepository:
         except Exception as e:
             db.rollback()
             logger.error(f"Error committing database changes: {str(e)}")
+            raise
+        finally:
+            db.close()
+
+    def rollback(self) -> None:
+        """
+        Rollback pending database changes
+        """
+        db = get_db()
+        try:
+            db.rollback()
+            logger.debug("Database changes rolled back successfully")
+        except Exception as e:
+            logger.error(f"Error rolling back database changes: {str(e)}")
             raise
         finally:
             db.close()

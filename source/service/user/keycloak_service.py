@@ -1,14 +1,21 @@
 import logging
 from typing import Optional
 from source.schema.user.schemas import UserCreate, UserUpdate
-from source.service.keycloak_service import get_keycloak_service
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 class UserKeycloakService:
     def __init__(self):
-        self.keycloak_service = get_keycloak_service()
+        # We'll get the keycloak service when needed to avoid async init issues
+        self._keycloak_service = None
+    
+    async def _get_keycloak_service(self):
+        """Get keycloak service instance when needed"""
+        if self._keycloak_service is None:
+            from source.service.keycloak_service import get_keycloak_service
+            self._keycloak_service = await get_keycloak_service()
+        return self._keycloak_service
     
     async def create_user(self, user_data: UserCreate) -> str:
         """
@@ -29,7 +36,8 @@ class UserKeycloakService:
                 
             logger.info(f"Creating user {user_data.username} in Keycloak")
             
-            user_id = await self.keycloak_service.create_user(
+            keycloak_service = await self._get_keycloak_service()
+            user_id = await keycloak_service.create_user(
                 username=user_data.username,
                 email=user_data.email,
                 first_name=user_data.first_name or "",
@@ -70,12 +78,14 @@ class UserKeycloakService:
                 
             logger.info(f"Updating user {user_data.user_id} in Keycloak")
             
-            success = await self.keycloak_service.update_user(
-                user_id=user_data.user_id,
-                username=user_data.username,
-                email=user_data.email,
-                first_name=user_data.first_name,
-                last_name=user_data.last_name
+            keycloak_service = await self._get_keycloak_service()
+            success = await keycloak_service.update_user(
+                user_data.user_id,  # user_id as first positional argument
+                username=user_data.username if user_data.username is not None else None,
+                email=user_data.email if user_data.email is not None else None,
+                first_name=user_data.first_name if user_data.first_name is not None else None,
+                last_name=user_data.last_name if user_data.last_name is not None else None,
+                role=user_data.role.value if user_data.role is not None else None
             )
             
             if success:
@@ -111,7 +121,8 @@ class UserKeycloakService:
                 
             logger.info(f"Deleting user {user_id} from Keycloak")
             
-            success = await self.keycloak_service.delete_user(user_id)
+            keycloak_service = await self._get_keycloak_service()
+            success = await keycloak_service.delete_user(user_id)
             
             if success:
                 logger.info(f"User {user_id} deleted successfully from Keycloak")
@@ -146,7 +157,8 @@ class UserKeycloakService:
                 
             logger.debug(f"Getting Keycloak user ID for username: {username}")
             
-            user_id = await self.keycloak_service.get_user_id_by_username(username)
+            keycloak_service = await self._get_keycloak_service()
+            user_id = await keycloak_service.get_user_id_by_username(username)
             
             if user_id:
                 logger.debug(f"Found Keycloak user ID {user_id} for username {username}")
