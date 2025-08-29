@@ -9,11 +9,7 @@ export const adminAPI = {
     if (params.offset) queryParams.append('offset', params.offset);
     
     const queryString = queryParams.toString();
-    const url = `/api/v1/users/admin/all${queryString ? `?${queryString}` : ''}`;
-    
-    console.log('🌐 Making API call to:', url);
-    console.log('🌐 With params:', params);
-    
+    const url = `/api/v1/users/admin/all${queryString ? `?${queryString}` : ''}`;    
     return api.get(url);
   },
   

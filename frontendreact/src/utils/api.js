@@ -6,12 +6,8 @@ export const apiClient = axios.create(API_CONFIG)
 apiClient.interceptors.request.use(
   config => {
     const token = localStorage.getItem('token')
-    console.log('🔐 Request interceptor - Token:', token ? 'Present' : 'Missing');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
-      console.log('🔐 Authorization header set');
-    } else {
-      console.log('🔐 No token found in localStorage');
     }
     return config
   },
@@ -22,20 +18,16 @@ apiClient.interceptors.request.use(
 
 apiClient.interceptors.response.use(
   response => {
-    console.log('📡 Response interceptor - Status:', response.status, 'URL:', response.config.url);
     return response
   },
   error => {
-    console.log('💥 Response interceptor - Error:', error.response?.status, 'URL:', error.config?.url);
     if (error.response?.status === 401) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       localStorage.setItem('login_status', 'loggedout')
       window.location.href = '/login'
     } else if (error.response?.status === 403) {
-      console.error('Access denied: Insufficient permissions')
     } else if (error.response?.status === 500) {
-      console.error('Server error:', error.response.data)
     }
     return Promise.reject(error)
   }

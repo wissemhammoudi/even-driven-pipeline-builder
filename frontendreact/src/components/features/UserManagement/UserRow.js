@@ -93,9 +93,6 @@ const UserRow = ({
         </td>
         <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>
           {(() => {
-            // Debug: Log the actual value
-            console.log('User created_at:', user.created_at, 'Type:', typeof user.created_at);
-            
             if (!user.created_at) {
               return <span className="text-gray-400 italic">Not available</span>
             }
@@ -107,7 +104,6 @@ const UserRow = ({
               }
               return date.toLocaleDateString()
             } catch (error) {
-              console.error('Date parsing error:', error, 'Value:', user.created_at);
               return <span className="text-gray-400 italic">Date error</span>
             }
           })()}

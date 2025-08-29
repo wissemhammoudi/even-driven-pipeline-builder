@@ -1,14 +1,9 @@
-from fastapi import APIRouter, status, HTTPException, Depends
-from typing import List
-from source.schema.superset.schema import SupersetCreate, SupersetUpdate, SupersetResponse, VisualizationControl
-from source.exceptions.exceptions import SupersetNotFoundError
+from fastapi import APIRouter, HTTPException, Depends
+from source.schema.superset.schema import VisualizationControl
 from source.config.config import api_config, superset_config
-from pydantic import ValidationError
-from sqlalchemy.exc import IntegrityError
 from source.service.user.services import UserService
 from source.service.pipeline_step.service import PipelineStepService
-from source.schema.user.schemas import UserRole     
-from source.service.authentication.keycloak_auth import get_current_user, require_user_role, require_admin_role 
+from source.service.authentication.keycloak_auth import KeycloakAuthService
 
 superset_router = APIRouter(prefix=f"{api_config.api_prefix}/superset")
 
@@ -18,7 +13,7 @@ def start_visualization(
     control: VisualizationControl,
     step_service: PipelineStepService = Depends(PipelineStepService),
     user_service: UserService = Depends(UserService),
-    current_user: dict = Depends(require_user_role)
+    current_user: dict = Depends(KeycloakAuthService.require_user_role)
 ):
     """Start the visualization for a pipeline"""
     try:

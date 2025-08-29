@@ -19,9 +19,7 @@ const UpdateProfilePage = () => {
       if (user?.username) {
         try {
           setIsLoading(true)
-          console.log('Fetching user data for:', user.username)
           const response = await userAPI.getUserByUsername(user.username)
-          console.log('User data response:', response)
           if (response) {
             setFullUserData(response)
             setUser(response)
@@ -33,7 +31,6 @@ const UpdateProfilePage = () => {
           setIsLoading(false)
         }
       } else {
-        console.log('No username found in user object:', user)
         setIsLoading(false)
       }
     }

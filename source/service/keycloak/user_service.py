@@ -1,13 +1,10 @@
 import asyncio
 import aiohttp
-from typing import Optional, List
+from typing import Optional
 from source.config.config import keycloak_config, application_user_init_config
 from source.models.user.models import User
 from source.schema.user.schemas import UserRole
 from source.repository.user.repository import UserRepository
-import logging
-
-logger = logging.getLogger(__name__)
 
 class KeycloakUserService:
     def __init__(self, session: aiohttp.ClientSession, setup_service):
@@ -274,16 +271,7 @@ class KeycloakUserService:
             return False
 
     async def update_user_role(self, user_id: str, role: str) -> bool:
-        """
-        Update user's role in Keycloak
-        
-        Args:
-            user_id: User ID in Keycloak
-            role: New role (admin or user)
-            
-        Returns:
-            True if successful, False otherwise
-        """
+
         try:
             admin_token = await self.setup_service.get_admin_token()
             if not admin_token:
@@ -294,7 +282,6 @@ class KeycloakUserService:
                 "Content-Type": "application/json"
             }
             
-            # First, get the role ID for the specified role
             role_url = f"{self.config.server_url}/admin/realms/{self.config.realm_name}/roles/{role}"
             async with self.session.get(role_url, headers=headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
                 if response.status != 200:
@@ -306,13 +293,11 @@ class KeycloakUserService:
                 if not role_id:
                     return False
             
-            # Remove all existing roles for the user
             user_roles_url = f"{self.config.server_url}/admin/realms/{self.config.realm_name}/users/{user_id}/role-mappings/realm"
             async with self.session.delete(user_roles_url, headers=headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
                 if response.status not in [200, 204]:
                     return False
             
-            # Add the new role to the user
             add_role_url = f"{self.config.server_url}/admin/realms/{self.config.realm_name}/users/{user_id}/role-mappings/realm"
             role_mapping = [{"id": role_id, "name": role}]
             
@@ -326,14 +311,9 @@ class KeycloakUserService:
 
     async def delete_user(self, user_id: str) -> bool:
         try:
-            logger.info(f"🗑️ Starting Keycloak user deletion for user: {user_id}")
-            
             admin_token = await self.setup_service.get_admin_token()
             if not admin_token:
-                logger.error(f"❌ Failed to get admin token for user deletion: {user_id}")
                 return False
-            
-            logger.info(f"✅ Admin token obtained for user deletion: {user_id}")
             
             headers = {
                 "Authorization": f"Bearer {admin_token}",
@@ -341,25 +321,17 @@ class KeycloakUserService:
             }
             
             user_url = f"{self.config.server_url}/admin/realms/{self.config.realm_name}/users/{user_id}"
-            logger.info(f"🌐 Making DELETE request to Keycloak: {user_url}")
-            
             async with self.session.delete(user_url, headers=headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
-                logger.info(f"📡 Keycloak delete response status: {response.status}")
                 
                 if response.status == 204:
-                    logger.info(f"✅ User {user_id} deleted successfully from Keycloak")
                     return True
                 else:
                     response_text = await response.text()
-                    logger.error(f"❌ Failed to delete user {user_id} from Keycloak. Status: {response.status}, Response: {response_text}")
                     return False
                     
         except asyncio.TimeoutError:
-            logger.error(f"⏰ Timeout error during Keycloak user deletion: {user_id}")
             return False
         except Exception as e:
-            logger.error(f"❌ Unexpected error during Keycloak user deletion {user_id}: {str(e)}")
-            logger.error(f"❌ Error type: {type(e).__name__}")
             return False
 
     async def get_user_id_by_username(self, username: str) -> Optional[str]:

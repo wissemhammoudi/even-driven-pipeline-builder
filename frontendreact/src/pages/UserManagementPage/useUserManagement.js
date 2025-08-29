@@ -8,17 +8,11 @@ export const useUserManagement = () => {
   const authStore = useAuthStore();
   const { user, isAdmin } = authStore;
   
-  console.log('🔍 useUserManagement - Auth store data:', { user, isAdmin });
-  console.log('🔍 localStorage check:', {
-    token: localStorage.getItem('token') ? 'Present' : 'Missing',
-    user: localStorage.getItem('user'),
-    loginStatus: localStorage.getItem('login_status')
-  });
+  
   
   const checkIsAdmin = useCallback(() => {
     const currentUser = authStore.getCurrentUser();
     const adminStatus = authStore.isAdmin();
-    console.log('🔍 checkIsAdmin called:', { currentUser, adminStatus });
     return adminStatus;
   }, [authStore]);
 
@@ -56,9 +50,6 @@ export const useUserManagement = () => {
         limit: pageSize,
         offset: offset
       });
-      
-      console.log('🔍 API Response:', response);
-      console.log('🔍 Response data:', response?.data);
       
       if (response && response.data && response.data.users) {
         setUsers(response.data.users);
@@ -105,7 +96,6 @@ export const useUserManagement = () => {
       resetForm();
       loadUsers();
     } catch (error) {
-      console.error('Failed to create user:', error);
       toast.error(error.response?.data?.detail || 'Failed to create user');
     }
   };
@@ -117,7 +107,6 @@ export const useUserManagement = () => {
         return;
       }
       
-      // Format the update data according to backend UserUpdate schema
       const updateData = {
         username: formData.username.trim(),
         email: formData.email.trim(),
@@ -132,8 +121,6 @@ export const useUserManagement = () => {
         }
       });
       
-      console.log('🔍 Updating user with data:', updateData);
-      
       await adminAPI.updateUser(editingUser.user_id, updateData);
       toast.success('User updated successfully');
       setShowEditDialog(false);
@@ -141,13 +128,7 @@ export const useUserManagement = () => {
       resetForm();
       loadUsers();
     } catch (error) {
-      console.error('Failed to update user:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data
-      });
+      
       toast.error(error.response?.data?.detail || 'Failed to update user');
     }
   };
@@ -156,19 +137,10 @@ export const useUserManagement = () => {
     if (!window.confirm('Are you sure you want to delete this user?')) return;
     
     try {
-      console.log('🗑️ Attempting to delete user:', userId);
       const response = await adminAPI.deleteUser(userId);
-      console.log('✅ Delete response:', response);
       toast.success('User deleted successfully');
       loadUsers();
     } catch (error) {
-      console.error('❌ Failed to delete user:', error);
-      console.error('❌ Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data
-      });
       
       let errorMessage = 'Failed to delete user';
       if (error.response?.data?.detail) {
@@ -192,21 +164,11 @@ export const useUserManagement = () => {
     if (!window.confirm(`Are you sure you want to delete ${selectedUsers.length} users?`)) return;
     
     try {
-      console.log('🗑️ Attempting to bulk delete users:', selectedUsers);
       const response = await adminAPI.bulkDeleteUsers(selectedUsers);
-      console.log('✅ Bulk delete response:', response);
       toast.success(`${selectedUsers.length} users deleted successfully`);
       setSelectedUsers([]);
       loadUsers();
-    } catch (error) {
-      console.error('❌ Failed to bulk delete users:', error);
-      console.error('❌ Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data
-      });
-      
+    } catch (error) {      
       let errorMessage = 'Failed to delete users';
       if (error.response?.data?.detail) {
         errorMessage = error.response.data.detail;

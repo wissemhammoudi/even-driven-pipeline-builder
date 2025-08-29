@@ -299,8 +299,6 @@ function buildTableSyncConfigFromObject(tableSyncConfig, tableColumns) {
 function buildTransformationTableSyncConfig(columnFunctions, tableColumns) {
   const tables = []
   
-  console.log('buildTransformationTableSyncConfig called with:', { columnFunctions, tableColumns })
-  
   const columnFunctionsTables = columnFunctions.tables || columnFunctions
   
   Object.keys(columnFunctionsTables).forEach(tableName => {
@@ -314,12 +312,6 @@ function buildTransformationTableSyncConfig(columnFunctions, tableColumns) {
       columnNames = Object.keys(columnFunctionsTables[tableName] || {})
     }
     
-    console.log(`Processing table ${tableName}:`, { 
-      tableColumns: tableColumns[tableName], 
-      columnNames,
-      columnFunctionKeys: Object.keys(columnFunctionsTables[tableName] || {})
-    })
-    
     if (columnNames.length > 0) {
       tables.push({
         schema_name: 'public',
@@ -331,7 +323,6 @@ function buildTransformationTableSyncConfig(columnFunctions, tableColumns) {
     }
   })
   
-  console.log('Generated table_sync_config:', { tables })
   return { tables }
 }
 
