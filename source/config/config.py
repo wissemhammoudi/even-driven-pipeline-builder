@@ -51,7 +51,7 @@ class KeycloakConfig(BaseSettings):
         return self.keycloak_realm
 
 class GitHubConfig(BaseSettings):
-    github_token: str = Field(env="github_token", default="your_github_token_here")
+    github_token: str = Field(env="github_token", default="token")
     github_username: str = Field(env="github_username", default="wissemHammoudi1")
     github_email: str = Field(env='github_email', default="wissem.hammoudi@elyadata.com")
 

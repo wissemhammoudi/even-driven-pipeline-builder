@@ -4,7 +4,7 @@ from source.schema.user.schemas import UserCreate, UserUpdate, UserResponse, Pas
 from source.service.user.services import UserService
 from source.exceptions.exceptions import UserNotFoundError, DuplicateUserError, InvalidPasswordError
 from source.config.config import api_config
-from source.service.authentication.keycloak_auth import KeycloakAuthService
+from source.service.authentication.keycloak_auth import require_user_role, require_admin_role
 
 
 user_router = APIRouter(prefix=f"{api_config.api_prefix}/users")
@@ -13,7 +13,7 @@ user_router = APIRouter(prefix=f"{api_config.api_prefix}/users")
 async def signup(
     user_data: UserCreate,
     user_service: UserService = Depends(UserService),
-    current_user: dict = Depends(KeycloakAuthService.require_admin_role)
+    current_user: dict = Depends(require_admin_role)
 ):
     try:
         return await user_service.signup(user_data)
@@ -32,12 +32,12 @@ async def login(login_data: LoginSchema, user_service: UserService = Depends(Use
 @user_router.get('/', response_model=List[UserResponse])
 def get_all_users(
     user_service: UserService = Depends(UserService),
-    current_user: dict = Depends(KeycloakAuthService.require_admin_role)
+    current_user: dict = Depends(require_admin_role)
 ):
     return user_service.get_all_users()
 
 @user_router.get('/me', response_model=UserResponse)
-async def get_current_user_info(current_user: dict = Depends(KeycloakAuthService.require_user_role)):
+async def get_current_user_info(current_user: dict = Depends(require_user_role)):
     try:
         user_service = UserService()
         user = user_service.get_user_by_id(current_user['user_id'])
@@ -59,7 +59,7 @@ async def get_current_user_info(current_user: dict = Depends(KeycloakAuthService
 def get_user_by_username(
     username: str, 
     user_service: UserService = Depends(UserService),
-    current_user: dict = Depends(KeycloakAuthService.require_user_role)
+    current_user: dict = Depends(require_user_role)
 ):
     try:
         return user_service.get_user_by_username(username)
@@ -69,7 +69,7 @@ def get_user_by_username(
 async def delete_user(
     user_id: str,  
     user_service: UserService = Depends(UserService),
-    current_user: dict = Depends(KeycloakAuthService.require_admin_role)
+    current_user: dict = Depends(require_admin_role)
 ):
     try:
         await user_service.delete_user(user_id)
@@ -79,7 +79,7 @@ async def delete_user(
 def update_password(
     password_data: PasswordUpdate, 
     user_service: UserService = Depends(UserService),
-    current_user: dict = Depends(KeycloakAuthService.require_user_role)
+    current_user: dict = Depends(require_user_role)
 ):
     try:
         return user_service.update_password(password_data)
@@ -91,7 +91,7 @@ def update_password(
 async def update_user(
     user_data: UserUpdate, 
     user_service: UserService = Depends(UserService),
-    current_user: dict = Depends(KeycloakAuthService.require_user_role)
+    current_user: dict = Depends(require_user_role)
 ):  
     try:    
         user_data.user_id = current_user['user_id']
@@ -116,7 +116,7 @@ async def update_user(
 async def create_user_admin(
     user_data: UserCreate,
     user_service: UserService = Depends(UserService),
-    current_user: dict = Depends(KeycloakAuthService.require_admin_role)
+    current_user: dict = Depends(require_admin_role)
 ):
     try:
         result = await user_service.signup(user_data)
@@ -148,7 +148,7 @@ def get_all_users_admin(
     limit: int = 100,
     offset: int = 0,
     user_service: UserService = Depends(UserService),
-    current_user: dict = Depends(KeycloakAuthService.require_admin_role)
+    current_user: dict = Depends(require_admin_role)
 ):
     return user_service.get_all_users_filtered(search=search, role=role, limit=limit, offset=offset)
 
@@ -156,7 +156,7 @@ def get_all_users_admin(
 async def bulk_delete_users(
     bulk_data: BulkUserDelete,
     user_service: UserService = Depends(UserService),
-    current_user: dict = Depends(KeycloakAuthService.require_admin_role)
+    current_user: dict = Depends(require_admin_role)
 ):
     try:
         for user_id in bulk_data.user_ids:
@@ -168,7 +168,7 @@ async def bulk_delete_users(
 def get_user_by_id_admin(
     user_id: str,
     user_service: UserService = Depends(UserService),
-    current_user: dict = Depends(KeycloakAuthService.require_admin_role)
+    current_user: dict = Depends(require_admin_role)
 ):
     try:
         return user_service.get_user_by_id(user_id)
@@ -180,7 +180,7 @@ async def update_user_admin(
     user_id: str,
     user_data: UserUpdate,
     user_service: UserService = Depends(UserService),
-    current_user: dict = Depends(KeycloakAuthService.require_admin_role)
+    current_user: dict = Depends(require_admin_role)
 ):
     try:
         user_data.user_id = user_id
@@ -208,7 +208,7 @@ async def update_user_admin(
 async def delete_user_admin(
     user_id: str,
     user_service: UserService = Depends(UserService),
-    current_user: dict = Depends(KeycloakAuthService.require_admin_role)
+    current_user: dict = Depends(require_admin_role)
 ):
     try:
         await user_service.delete_user(user_id)
