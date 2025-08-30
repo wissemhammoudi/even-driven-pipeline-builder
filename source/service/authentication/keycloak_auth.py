@@ -49,65 +49,64 @@ class KeycloakAuthService:
             return UserRole.user
         return UserRole.viewer
 
-    @staticmethod
-    async def get_current_user(
-        credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
-        keycloak_service: "KeycloakAuthService" = Depends(lambda: keycloak_auth_service),
-    ) -> Dict[str, Any]:
-        if not credentials:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Missing authentication credentials",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        
-        token = credentials.credentials
-        if not token:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token format",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-
-        user_info = await keycloak_service.verify_token(token)
-        if not user_info:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid or expired token",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        
-        user_info["mapped_role"] = keycloak_service.get_user_role(user_info.get("roles", []))
-        return user_info
-    
-    @staticmethod
-    async def get_current_user_with_role(
-        current_user: Dict[str, Any] = Depends(get_current_user)
-    ) -> Dict[str, Any]:
-        return current_user
-
-    @staticmethod
-    async def require_admin_role(
-        current_user: Dict[str, Any] = Depends(get_current_user_with_role)
-    ) -> Dict[str, Any]:
-        user_role = current_user.get("mapped_role")
-        if user_role != UserRole.admin:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Admin role required. Current role: {user_role}"
-            )
-        return current_user
-
-    @staticmethod
-    async def require_user_role(
-        current_user: Dict[str, Any] = Depends(get_current_user_with_role)
-    ) -> Dict[str, Any]:
-        if current_user.get("mapped_role") not in [UserRole.user, UserRole.admin]:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="User role required"
-            )
-        return current_user
-
 
 keycloak_auth_service = KeycloakAuthService()
+
+
+async def get_current_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+) -> Dict[str, Any]:
+    if not credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    token = credentials.credentials
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token format",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    user_info = await keycloak_auth_service.verify_token(token)
+    if not user_info:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    user_info["mapped_role"] = KeycloakAuthService.get_user_role(user_info.get("roles", []))
+    return user_info
+
+
+async def get_current_user_with_role(
+    current_user: Dict[str, Any] = Depends(get_current_user)
+) -> Dict[str, Any]:
+    return current_user
+
+
+async def require_admin_role(
+    current_user: Dict[str, Any] = Depends(get_current_user_with_role)
+) -> Dict[str, Any]:
+    user_role = current_user.get("mapped_role")
+    if user_role != UserRole.admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Admin role required. Current role: {user_role}"
+        )
+    return current_user
+
+
+async def require_user_role(
+    current_user: Dict[str, Any] = Depends(get_current_user_with_role)
+) -> Dict[str, Any]:
+    if current_user.get("mapped_role") not in [UserRole.user, UserRole.admin]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User role required"
+        )
+    return current_user

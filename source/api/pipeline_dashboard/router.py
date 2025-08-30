@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, status
 from source.service.pipeline_dashboard.service import PipelineDashboardService
 from source.config.config import api_config
-from source.service.authentication.keycloak_auth import KeycloakAuthService
+from source.service.authentication.keycloak_auth import require_user_role
 
 pipeline_dashboard_router = APIRouter(prefix=f"{api_config.api_prefix}/pipeline-dashboard")
 
@@ -10,7 +10,7 @@ def get_pipeline_analytics(
     pipeline_id: int,
     days: int = 30,
     pipeline_dashboard_service: PipelineDashboardService = Depends(PipelineDashboardService),
-    current_user: dict = Depends(KeycloakAuthService.require_user_role)
+    current_user: dict = Depends(require_user_role)
 ):
 
     try:
