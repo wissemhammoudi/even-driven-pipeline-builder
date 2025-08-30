@@ -13,6 +13,7 @@ from source.api.agentic_transformation.router import router_transformation
 from source.api.user_pipeline_access.router import user_pipeline_access_router
 from source.api.dashboard.router import dashboard_router
 from source.api.pipeline_dashboard.router import pipeline_dashboard_router
+from source.api.schema_change_api import router as schema_change_router
 from source.service.keycloak_service import get_keycloak_service    
 from source.service.PipelineManager.transfomrationManager.n8n_manager import N8NManager
 
@@ -45,6 +46,7 @@ app.include_router(router_transformation, tags=["transformation"])
 app.include_router(user_pipeline_access_router, tags=["User Pipeline Access"])
 app.include_router(dashboard_router, tags=["Dashboard"])
 app.include_router(pipeline_dashboard_router, tags=["Pipeline Dashboard"])
+app.include_router(schema_change_router, tags=["Schema Change Detection"])
 Base.metadata.create_all(bind=engine)
 
 
