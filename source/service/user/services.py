@@ -8,7 +8,6 @@ from .superset_service import UserSupersetService
 from .initialization_service import UserInitializationService
 from datetime import datetime, timezone
 
-
 class UserService:
     def __init__(self):
         self.user_repository = UserRepository()
@@ -23,9 +22,7 @@ class UserService:
         return self._keycloak_service
     
     async def signup(self, user_data: UserCreate) -> Dict[str, Any]:
-
         try:
-
             existing_user = self.user_repository.get_user_by_email_and_username(
                 user_data.email, user_data.username
             )
@@ -67,7 +64,7 @@ class UserService:
                         superset_user_id=superset_user_id
                     )
                 else:
-                    raise Exception("Failed to create user in Superset")
+                    raise Exception(f"Failed to create user {user_data.username} in Superset")
                     
             except Exception as e:
                 raise Exception(f"Failed to create Superset user for {user_data.username}: {str(e)}")
@@ -85,15 +82,14 @@ class UserService:
             raise Exception(f"Failed to create user: {str(e)}")
 
     def get_all_users(self) -> list:
-        """Get all active users"""
         try:
             users = self.user_repository.get_all_active_user()
             return users
         except Exception as e:
-            raise
-
+            raise Exception(f"Failed to get all users: {str(e)}")
+    
     def get_all_users_filtered(self, search: str = None, role: str = None, limit: int = 100, offset: int = 0) -> Dict[str, Any]:
-
+       
         try:
             if limit <= 0 or limit > 1000:
                 limit = 100
@@ -114,9 +110,10 @@ class UserService:
             
             return transformed_result
         except Exception as e:
-            raise
-
+            raise Exception(f"Failed to get filtered users: {str(e)}")
+    
     def get_user_by_id(self, user_id: str) -> Optional[User]:
+       
         try:
             user = self.user_repository.get_user_by_id(user_id)
             if user:
@@ -124,27 +121,22 @@ class UserService:
             else:
                 raise UserNotFoundError(f"User with ID {user_id} not found")
         except Exception as e:
-            raise
+            raise Exception(f"Failed to get user by ID {user_id}: {str(e)}")
+    
+    def get_user_by_username(self, username: str) -> User:
 
-    def get_user_by_username(self, username: str) -> Optional[User]:
         try:
-            user = self.user_repository.get_user_by_username(username)
-            if user:
-                return user
-            else:
-                raise UserNotFoundError(f"User with username {username} not found")
+            if not username:
+                raise ValueError("Username cannot be empty")
+                
+            user = self.user_repository.get_active_user_by_username(username)
+            if not user:
+                raise UserNotFoundError(f"User with username '{username}' not found")
+            return user
+        except UserNotFoundError:
+            raise Exception(f"Failed to get user by username {username}: {str(e)}")
         except Exception as e:
-            raise
-
-    def get_user_by_email(self, email: str) -> Optional[User]:
-        try:
-            user = self.user_repository.get_user_by_email(email)
-            if user:
-                return user
-            else:
-                raise UserNotFoundError(f"User with email {email} not found")
-        except Exception as e:
-            raise
+            raise Exception(f"Failed to get user by username {username}: {str(e)}")
 
     async def delete_user(self, user_id: str) -> Dict[str, str]:
 
@@ -152,13 +144,11 @@ class UserService:
             user = self.user_repository.get_user_by_id(user_id)
             if not user:
                 raise UserNotFoundError(f"User with ID {user_id} not found")
+
+            await self.keycloak_service.delete_user(user_id)
             
-            keycloak_service = await self._get_keycloak_service()
-            keycloak_deleted = await keycloak_service.delete_user(user_id)
-            if not keycloak_deleted:
-                raise Exception("Failed to delete user from Keycloak")
+            self.user_repository.mark_deleted(user)
             
-            self.user_repository.mark_deleted(user_id)
             return {"message": "User deleted successfully from Keycloak and local database"}
             
         except UserNotFoundError:
@@ -181,9 +171,10 @@ class UserService:
         except UserNotFoundError:
             raise
         except Exception as e:
-            raise
+            raise Exception(f"Failed to update password for user {password_data.user_id}: {str(e)}")
 
     async def update_user(self, user_data: UserUpdate) -> Dict[str, str]:
+
         try:
             if not user_data.user_id:
                 raise ValueError("User ID cannot be empty")
@@ -242,7 +233,7 @@ class UserService:
             if not login_data.username or not login_data.password:
                 raise InvalidPasswordError("Username and password are required")
                 
-            auth_result = await keycloak_auth_service.authenticate_user(
+            auth_result = await self.keycloak_service.authenticate_user(
                 login_data.username, 
                 login_data.password
             )
@@ -270,31 +261,9 @@ class UserService:
             raise InvalidPasswordError(f"Authentication failed: {str(e)}")
 
     async def create_initial_users(self) -> list:
+
         try:
             created_users = await self.initialization_service.create_initial_users()
             return created_users
         except Exception as e:
             raise Exception(f"Failed to create initial users: {str(e)}")
-
-    async def refresh_user_token(self, refresh_token: str) -> Optional[Dict[str, Any]]:
-
-        try:
-            new_tokens = await self._get_keycloak_service().refresh_token(refresh_token)
-            
-            if new_tokens:
-                return new_tokens
-            else:
-                return None
-                
-        except Exception as e:
-            raise Exception(f"Failed to refresh user token: {str(e)}")
-
-    def get_user_role(self, user_id: str) -> Optional[UserRole]:
-
-        try:
-            user = self.user_repository.get_user_by_id(user_id)
-            if user:
-                return user.role
-            return None
-        except Exception as e:
-            raise Exception(f"Failed to get user role for {user_id}: {str(e)}")

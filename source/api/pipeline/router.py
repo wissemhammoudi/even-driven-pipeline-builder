@@ -13,6 +13,27 @@ from source.schema.user.schemas import UserRole
 from source.service.authentication.keycloak_auth import require_user_role, require_admin_role
 pipeline_router = APIRouter(prefix=f"{api_config.api_prefix}/pipeline")
 
+@pipeline_router.post("/test-connection")
+def test_connection(
+    metadata_req: PostgreSQLMetadataRequest,
+    current_user: dict = Depends(require_user_role)
+):
+    """Test database connection"""
+    try:
+        source = PostgreSQLSourceMetadata(
+            host=metadata_req.host,
+            dbname=metadata_req.dbname,
+            user=metadata_req.user,
+            password=metadata_req.password,
+            port=metadata_req.port,
+        )
+        return source.test_connection()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Connection test failed: {str(e)}"
+        )
+
 @pipeline_router.post("/schema")
 def get_postgresql_schema_info(
     metadata_req: PostgreSQLMetadataRequest,
