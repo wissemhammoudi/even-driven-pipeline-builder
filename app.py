@@ -60,8 +60,7 @@ async def startup_event():
     # Try Keycloak setup first
     try:
         print("🔧 Attempting Keycloak setup...")
-        keycloak_service = get_keycloak_service()
-        await keycloak_service.initialize()
+        keycloak_service = await get_keycloak_service()
         
         print("⏳ Waiting for Keycloak to be ready...")
         keycloak_ready = await keycloak_service.wait_for_ready(max_attempts=15, delay=3.0)
@@ -130,8 +129,7 @@ async def health_check():
 async def auth_status():
     """Check authentication service status"""
     try:
-        keycloak_service = get_keycloak_service()
-        await keycloak_service.initialize()
+        keycloak_service = await get_keycloak_service()
         connection_test = await keycloak_service.test_connection()
         return {
             "keycloak_status": "connected" if connection_test["reachable"] else "disconnected",

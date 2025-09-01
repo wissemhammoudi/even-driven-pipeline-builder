@@ -145,7 +145,8 @@ class UserService:
             if not user:
                 raise UserNotFoundError(f"User with ID {user_id} not found")
 
-            await self.keycloak_service.delete_user(user_id)
+            keycloak_service = await self._get_keycloak_service()
+            await keycloak_service.delete_user(user_id)
             
             self.user_repository.mark_deleted(user)
             
@@ -233,7 +234,8 @@ class UserService:
             if not login_data.username or not login_data.password:
                 raise InvalidPasswordError("Username and password are required")
                 
-            auth_result = await self.keycloak_service.authenticate_user(
+            keycloak_service = await self._get_keycloak_service()
+            auth_result = await keycloak_service.authenticate_user(
                 login_data.username, 
                 login_data.password
             )

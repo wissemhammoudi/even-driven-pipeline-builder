@@ -119,20 +119,16 @@ class UserKeycloakService:
             if not username or not password:
                 raise ValueError("Username and password are required")
                 
-            logger.debug(f"Authenticating user {username} with Keycloak")
+            keycloak_service = await self._get_keycloak_service()
             
-            auth_result = await self.keycloak_service.authenticate_user(username, password)
+            auth_result = await keycloak_service.authenticate_user(username, password)
             
             if auth_result:
-                logger.info(f"User {username} authenticated successfully with Keycloak")
                 return auth_result
             else:
-                logger.warning(f"Authentication failed for user {username}")
                 return None
                 
         except ValueError as e:
-            logger.error(f"Invalid input for authentication: {str(e)}")
             raise
         except Exception as e:
-            logger.error(f"Authentication failed for user {username}: {str(e)}")
             raise Exception(f"Authentication failed: {str(e)}")

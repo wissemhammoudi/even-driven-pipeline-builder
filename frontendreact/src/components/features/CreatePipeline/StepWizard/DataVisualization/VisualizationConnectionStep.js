@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { ConfigHeader } from '../shared/utils'
 import { useDestinationConfig } from '../shared/useDestinationConfig'
 import { useUtilityPlugin } from '../shared/useUtilityPlugin'
 import ExistingConnectionDisplay from '../shared/ExistingConnectionDisplay'
 import DynamicConfigFields from '../DataIngestion/DynamicConfigFields'
+import { pipelineAPI } from '../../../../../api/pipelineApi'
 
 const DEFAULT_DESTINATION_CONFIG = {
   host: '',
@@ -27,6 +28,8 @@ const VisualizationConnectionStep = ({
 }) => {
   const { destinationConfig, canUseExistingConnection } = useDestinationConfig(allPipelineSteps)
   const { utilityType } = useUtilityPlugin(plugins, onPluginSelection, 'superset')
+  const [testStatus, setTestStatus] = useState(null)
+  const [isTesting, setIsTesting] = useState(false)
 
   useEffect(() => {
     if (useExistingConnection && destinationConfig && onInputChange) {
@@ -139,6 +142,45 @@ const VisualizationConnectionStep = ({
     }
   }
 
+  const handleTestConnection = async () => {
+    const config = formData.step_config.destination_config || {}
+    
+    if (!config.host || !config.database || !config.user || !config.password) {
+      setTestStatus({
+        success: false,
+        message: 'Please fill in all required fields (host, database, user, password)'
+      })
+      return
+    }
+
+    setIsTesting(true)
+    setTestStatus(null)
+
+    try {
+      const result = await pipelineAPI.testConnection({
+        source_type: 'postgresql',
+        host: config.host,
+        port: config.port || 5432,
+        database: config.database,
+        user: config.user,
+        password: config.password,
+        schema: config.schema || 'public'
+      })
+
+      setTestStatus({
+        success: result.success,
+        message: result.message || (result.success ? 'Connection successful!' : 'Connection failed')
+      })
+    } catch (error) {
+      setTestStatus({
+        success: false,
+        message: error.message || 'Connection test failed'
+      })
+    } finally {
+      setIsTesting(false)
+    }
+  }
+
   return (
     <div className='space-y-6'>
       <ConfigHeader 
@@ -217,12 +259,35 @@ const VisualizationConnectionStep = ({
             </p>
 
             {utilityType && pluginConfigSchemas.utility ? (
-              <DynamicConfigFields
-                pluginType='utility'
-                pluginSchema={pluginConfigSchemas.utility}
-                currentConfig={formData.step_config.destination_config || DEFAULT_DESTINATION_CONFIG}
-                onConfigChange={handleConfigChange}
-              />
+              <>
+                <DynamicConfigFields
+                  pluginType='utility'
+                  pluginSchema={pluginConfigSchemas.utility}
+                  currentConfig={formData.step_config.destination_config || DEFAULT_DESTINATION_CONFIG}
+                  onConfigChange={handleConfigChange}
+                />
+                
+                <div className='mt-4'>
+                  <button
+                    type='button'
+                    onClick={handleTestConnection}
+                    disabled={isTesting}
+                    className='inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-sky-400 hover:bg-sky-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 disabled:opacity-50 disabled:cursor-not-allowed'
+                  >
+                    {isTesting ? 'Testing...' : 'Test Destination Connection'}
+                  </button>
+                  
+                  {testStatus && (
+                    <div className={`mt-2 p-3 rounded-md ${
+                      testStatus.success 
+                        ? 'bg-green-50 border border-green-200 text-green-700' 
+                        : 'bg-red-50 border border-red-200 text-red-700'
+                    }`}>
+                      <p className='text-sm'>{testStatus.message}</p>
+                    </div>
+                  )}
+                </div>
+              </>
             ) : (
               <div className='text-center py-4 text-gray-500'>
                 <p>Loading utility plugin configuration...</p>
