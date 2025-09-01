@@ -12,23 +12,28 @@ class KeycloakService:
         self.admin_token = None
         self.session = None
         
-    async def __aenter__(self):
-        if not self.session:
-            timeout = aiohttp.ClientTimeout(total=30, connect=10)
-            connector = aiohttp.TCPConnector(limit=100, limit_per_host=30)
-            self.session = aiohttp.ClientSession(timeout=timeout, connector=connector)
-        return self
+    async def initialize(self):
+        """Initialize the aiohttp session"""
+        if self.session is None:
+            self.session = aiohttp.ClientSession()
         
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Clean up the service"""
+    async def close(self):
+        """Close the aiohttp session"""
         if self.session:
             await self.session.close()
             self.session = None
+        
+    async def __aenter__(self):
+        await self.initialize()
+        return self
+        
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.close()
     
     def _get_services(self):
         """Get all the focused service instances"""
         if not self.session:
-            raise RuntimeError("KeycloakService session not initialized. Use async context manager.")
+            raise RuntimeError("KeycloakService session not initialized. Call initialize() first.")
         
         setup_service = KeycloakSetupService(self.session)
         user_service = KeycloakUserService(self.session, setup_service)

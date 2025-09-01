@@ -1,6 +1,8 @@
 from source.service.keycloak.main_service import KeycloakService
 import asyncio
 
+__all__ = ['KeycloakService']
+
 _keycloak_service_instance = None
 _lock = asyncio.Lock()
 
@@ -24,12 +26,12 @@ def get_keycloak_service_sync() -> KeycloakService:
 
 async def create_keycloak_service() -> KeycloakService:
     service = KeycloakService()
-    await service.__aenter__()
+    await service.initialize()
     return service
 
 async def close_keycloak_service(service: KeycloakService):
     if service:
-        await service.__aexit__(None, None, None)
+        await service.close()
 
 async def cleanup_keycloak_service():
     global _keycloak_service_instance
