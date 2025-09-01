@@ -85,6 +85,15 @@ class PipelineAPI {
       throw handleApiError(error)
     }
   }
+
+  async testConnection (connectionData) {
+    try {
+      const response = await pipelineApiFunctions.testConnection(connectionData)
+      return response.data
+    } catch (error) {
+      throw handleApiError(error)
+    }
+  }
 }
 
 export const pipelineAPI = new PipelineAPI()

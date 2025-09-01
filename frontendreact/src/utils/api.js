@@ -114,6 +114,7 @@ export const userPipelineAccessAPI = {
 
 export const pipelineAPI = {
   getSchemaInfo: schemaData => api.post('/api/v1/pipeline/schema', schemaData),
+  testConnection: connectionData => api.post('/api/v1/pipeline/test-connection', connectionData),
   getPipelines: (userId, params = {}) => {
     const queryParams = new URLSearchParams()
     queryParams.append('user_id', userId)

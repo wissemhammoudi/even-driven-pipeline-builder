@@ -100,3 +100,35 @@ class UserKeycloakService:
             raise Exception(f"Invalid input for getting Keycloak user ID: {str(e)}")
         except Exception as e:
             raise Exception(f"Failed to get Keycloak user ID: {str(e)}")
+
+    async def authenticate_user(self, username: str, password: str) -> dict:
+        """
+        Authenticate a user with Keycloak
+        
+        Args:
+            username: User's username
+            password: User's password
+            
+        Returns:
+            Authentication result with tokens
+            
+        Raises:
+            Exception: If authentication fails
+        """
+        try:
+            if not username or not password:
+                raise ValueError("Username and password are required")
+                
+            keycloak_service = await self._get_keycloak_service()
+            
+            auth_result = await keycloak_service.authenticate_user(username, password)
+            
+            if auth_result:
+                return auth_result
+            else:
+                return None
+                
+        except ValueError as e:
+            raise
+        except Exception as e:
+            raise Exception(f"Authentication failed: {str(e)}")

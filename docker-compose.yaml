@@ -3,6 +3,8 @@ services:
   backend:
     build: .
     container_name: backend
+    environment:
+      - KEYCLOAK_CLIENT_SECRET=your-client-secret-here
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "./source:/app/source"

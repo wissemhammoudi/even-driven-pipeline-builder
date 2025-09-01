@@ -13,6 +13,48 @@ from source.schema.user.schemas import UserRole
 from source.service.authentication.keycloak_auth import require_user_role, require_admin_role
 pipeline_router = APIRouter(prefix=f"{api_config.api_prefix}/pipeline")
 
+@pipeline_router.post("/test-connection")
+def test_connection(
+    metadata_req: PostgreSQLMetadataRequest,
+    current_user: dict = Depends(require_user_role)
+):
+    """Test database connection"""
+    try:
+        source = PostgreSQLSourceMetadata(
+            host=metadata_req.host,
+            dbname=metadata_req.dbname,
+            user=metadata_req.user,
+            password=metadata_req.password,
+            port=metadata_req.port,
+        )
+        result = source.test_connection()
+        
+        if result.get("status") == "success":
+            return {
+                "success": True,
+                "message": "Connection successful! Database is accessible.",
+                "test_result": result,
+                "connection_status": "connected",
+                "response_time_ms": result.get("response_time_ms"),
+                "database_info": result.get("database_info")
+            }
+        else:
+            return {
+                "success": False,
+                "message": f"Connection failed: {result.get('error_message', 'Unknown error')}",
+                "test_result": result,
+                "connection_status": "failed",
+                "error_type": result.get("error_type"),
+                "error_message": result.get("error_message")
+            }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Connection test failed: {str(e)}",
+            "connection_status": "error",
+            "error_message": str(e)
+        }
+
 @pipeline_router.post("/schema")
 def get_postgresql_schema_info(
     metadata_req: PostgreSQLMetadataRequest,
