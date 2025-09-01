@@ -27,12 +27,33 @@ def test_connection(
             password=metadata_req.password,
             port=metadata_req.port,
         )
-        return source.test_connection()
+        result = source.test_connection()
+        
+        if result.get("status") == "success":
+            return {
+                "success": True,
+                "message": "Connection successful! Database is accessible.",
+                "test_result": result,
+                "connection_status": "connected",
+                "response_time_ms": result.get("response_time_ms"),
+                "database_info": result.get("database_info")
+            }
+        else:
+            return {
+                "success": False,
+                "message": f"Connection failed: {result.get('error_message', 'Unknown error')}",
+                "test_result": result,
+                "connection_status": "failed",
+                "error_type": result.get("error_type"),
+                "error_message": result.get("error_message")
+            }
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Connection test failed: {str(e)}"
-        )
+        return {
+            "success": False,
+            "message": f"Connection test failed: {str(e)}",
+            "connection_status": "error",
+            "error_message": str(e)
+        }
 
 @pipeline_router.post("/schema")
 def get_postgresql_schema_info(
