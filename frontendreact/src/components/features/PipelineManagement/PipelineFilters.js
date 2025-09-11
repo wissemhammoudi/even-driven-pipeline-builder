@@ -14,10 +14,14 @@ const PipelineFilters = ({
   onClearFilters
 }) => (
   <>
-    <div className='flex flex-wrap gap-4 items-end'>
-      <SearchFilter searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
-      <DateFilter dateFilter={dateFilter} setDateFilter={setDateFilter} />
-      <TypeFilter isActive={showDeprecated} onToggle={setShowDeprecated} />
+    <div className='bg-white shadow rounded-lg p-4'>
+      <div className='flex flex-wrap gap-6 items-end'>
+        <div className='flex-1 min-w-64'>
+          <SearchFilter searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+        </div>
+        <DateFilter dateFilter={dateFilter} setDateFilter={setDateFilter} />
+        <TypeFilter isActive={showDeprecated} onToggle={setShowDeprecated} />
+      </div>
     </div>
     <ActiveFiltersIndicator
       filters={[

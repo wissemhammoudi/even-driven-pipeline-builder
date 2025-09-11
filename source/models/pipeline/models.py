@@ -11,6 +11,7 @@ class Pipeline(Base):
     pipeline_id = Column(Integer, Identity(always=True), primary_key=True, nullable=False)
     name = Column(String(100), nullable=False)
     description = Column(String(500), nullable=True)
+    status = Column(String(20), default='STOPPED', nullable=False)
     created_at = Column(DateTime, default=datetime.now, nullable=False)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now, nullable=False)
     is_deleted = Column(Boolean, default=False, nullable=False)

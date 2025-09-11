@@ -5,6 +5,12 @@ from source.schema.pipeline_step.schema import StepBase,PipelineStepCreate
 from enum import Enum
 
 
+class PipelineStatusEnum(str, Enum):
+    RUNNING = "RUNNING"
+    STOPPED = "STOPPED"
+    BROKEN = "BROKEN"
+
+
 class PipelineCreate(BaseModel):
     name: str
     description: Optional[str] = None
@@ -30,6 +36,7 @@ class PipelineResponse(BaseModel):
     pipeline_id: int
     name: str
     description: Optional[str] = None
+    status: PipelineStatusEnum
     created_at: datetime
     updated_at: datetime
     is_deleted: bool

@@ -180,7 +180,7 @@ const usePipelineStore = create((set, get) => ({
     const loadingToast = toast.loading('Starting pipeline...', { duration: Infinity })
 
     try {
-      await pipelineRunAPI.startPipeline(parseInt(pipelineId), parseInt(userId))
+      await pipelineRunAPI.startPipeline(parseInt(pipelineId), userId.toString())
       toast.dismiss(loadingToast)
       toast.success('Pipeline started successfully!')
         

@@ -1,6 +1,7 @@
 from typing import List, Optional
 from source.models.user.models import User
 from source.models.pipeline.models import Pipeline
+from source.models.pipeline_step.models import Step
 from source.models.user_pipeline_access.model import UserPipelineAccess
 from source.repository.database import get_db
 from sqlalchemy import func
@@ -52,6 +53,26 @@ class PipelineRepository:
     
     def get_pipline_by_id(self,pipeline_id:int):
         return self.db.query(Pipeline).filter(Pipeline.pipeline_id==pipeline_id,Pipeline.is_deleted == False).first()
+    
+    def get_pipeline_by_name(self, name: str) -> Optional[Pipeline]:
+        return self.db.query(Pipeline).filter(
+            Pipeline.name == name,
+            Pipeline.is_deleted == False
+        ).first()
+
+    def get_ingestion_source_config_by_pipeline_id(self, pipeline_id: int) -> Optional[dict]:
+        steps = self.db.query(Step).filter(
+            Step.pipeline_id == pipeline_id,
+            Step.is_deleted == False
+        ).all()
+        if not steps:
+            return None
+        ingestion_steps = [s for s in steps if s.step_config and s.step_config.get("config_type") == "data ingestion"]
+        if not ingestion_steps:
+            return None
+        ingestion_config = ingestion_steps[0].step_config
+        conn_cfg = ingestion_config.get("connection_config", {})
+        return conn_cfg
     
     def create_Pipeline(self,pipeline: Pipeline):
         try:

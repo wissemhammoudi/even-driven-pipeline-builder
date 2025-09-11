@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List
 from source.models.pipeline.models import Pipeline
-from source.schema.pipeline.schema import PipelineCreate, PipelineDelete, StepAdd, StepDelete, PipelineUpdate, PipelineResponse, StepTypeEnum
+from source.schema.pipeline.schema import PipelineCreate, PipelineDelete, StepAdd, StepDelete, PipelineUpdate, PipelineResponse, StepTypeEnum, PipelineStatusEnum
 from source.repository.pipeline.repository import PipelineRepository
 from source.service.pipeline_step.service import PipelineStepService
 from source.service.step_configuration_association.service import StepConfigurationAssociationService
@@ -64,6 +64,7 @@ class PipelineService:
                 name=pipeline_data.name,
                 description=pipeline_data.description,
                 created_by=pipeline_data.created_by,
+                status=PipelineStatusEnum.STOPPED,
                 created_at=datetime.utcnow()
             )
         pipeline_id = self.pipeline_repository.create_Pipeline(pipeline)

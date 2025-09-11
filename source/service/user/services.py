@@ -7,6 +7,7 @@ from source.service.authentication.keycloak_auth import keycloak_auth_service
 from .superset_service import UserSupersetService
 from .initialization_service import UserInitializationService
 from datetime import datetime, timezone
+from source.config.config import superset_config
 
 class UserService:
     def __init__(self):
@@ -49,25 +50,23 @@ class UserService:
             if not saved_user:
                 raise Exception("User was not properly saved to database")
             
-            try:
-                superset_user_id = self.superset_service.create_user(
-                    username=user_data.username,
-                    email=user_data.email,
-                    first_name=user_data.first_name or "",
-                    last_name=user_data.last_name or "",
-                    role=user_data.role or UserRole.user
-                )
-                
-                if superset_user_id:
-                    self.superset_service.add_user_association(
-                        user_id=keycloak_user_id, 
-                        superset_user_id=superset_user_id
+            if superset_config.enable_superset_integration:
+                try:
+                    superset_user_id = self.superset_service.create_user(
+                        username=user_data.username,
+                        email=user_data.email,
+                        first_name=user_data.first_name or "",
+                        last_name=user_data.last_name or "",
+                        role=user_data.role or UserRole.user
                     )
-                else:
-                    raise Exception(f"Failed to create user {user_data.username} in Superset")
                     
-            except Exception as e:
-                raise Exception(f"Failed to create Superset user for {user_data.username}: {str(e)}")
+                    if superset_user_id:
+                        self.superset_service.add_user_association(
+                            user_id=keycloak_user_id, 
+                            superset_user_id=superset_user_id
+                        )
+                except Exception as e:
+                    pass
             
             return {
                 "message": "User created successfully in Keycloak and local database",

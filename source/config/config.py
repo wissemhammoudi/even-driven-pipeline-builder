@@ -51,7 +51,7 @@ class KeycloakConfig(BaseSettings):
         return self.keycloak_realm
 
 class GitHubConfig(BaseSettings):
-    github_token: str = Field(env="github_token", default="token    ")
+    github_token: str = Field(env="github_token", default="token")
     github_username: str = Field(env="github_username", default="wissemHammoudi1")
     github_email: str = Field(env='github_email', default="wissem.hammoudi@elyadata.com")
 
@@ -59,8 +59,10 @@ class DockerConfig(BaseSettings):
     meltano_docker_image: str = Field(env="meltano_docker_image", default="wissem020/meltano")
     dlt_sqlmesh_superset_docker_image: str = Field(env="dlt_sqlmesh_superset_docker_image", default="wissem020/sqlmesh_dlt_superset")
     Docker_Client_Base_Url: str = Field(env="Docker_Client_Base_Url", default="unix://var/run/docker.sock")
+    docker_network_name: str = Field(env="DOCKER_NETWORK_NAME", default="even-driven-pipeline-builder_default")
 
 class SupersetConfig(BaseSettings):
+    enable_superset_integration: bool = Field(env="ENABLE_SUPERSET_INTEGRATION", default=True)
     superset_secret_key: str = Field(env="superset_secret_key", default="admin")
     superset_user: str = Field(env="superset_user", default="admin")
     superset_password: str = Field(env="superset_password", default="admin")
@@ -106,6 +108,10 @@ class ApplicationUserInitConfig(BaseSettings):
 
 class ExternalServicesConfig(BaseSettings):
     n8n_webhook_Url: str = Field(env="n8n_webhook_Url", default="http://n8n:5678/webhook/sql-transformation")
+    kafka_bootstrap_servers: str = Field(env="KAFKA_BOOTSTRAP_SERVERS", default="kafka:9092")
+    debezium_url: str = Field(env="DEBEZIUM_URL", default="http://debezium:8083")
+    redis_host: str = Field(env="REDIS_HOST", default="redis")
+    redis_port: int = Field(env="REDIS_PORT", default=6379)
 
 class DebeziumConfig(BaseSettings):
     debezium_url: str = Field(env="DEBEZIUM_URL", default="http://debezium:8083")
@@ -122,7 +128,6 @@ class DebeziumConfig(BaseSettings):
 
 class KafkaConfig(BaseSettings):
     kafka_bootstrap_servers: str = Field(env="KAFKA_BOOTSTRAP_SERVERS", default="kafka:9092")
-    kafka_schema_registry_url: str = Field(env="KAFKA_SCHEMA_REGISTRY_URL", default="http://schema-registry:8081")
     kafka_consumer_group_id: str = Field(env="KAFKA_CONSUMER_GROUP_ID", default="schema-change-detector")
     kafka_auto_offset_reset: str = Field(env="KAFKA_AUTO_OFFSET_RESET", default="earliest")
     kafka_enable_auto_commit: bool = Field(env="KAFKA_ENABLE_AUTO_COMMIT", default=True)

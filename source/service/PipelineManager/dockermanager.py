@@ -44,7 +44,7 @@ class DockerManager:
             container_id = self.client.containers.run(**container_config)
             self.container = self.client.containers.get(container_id.id)
             
-            network = self.client.networks.get("near-realtime-data-pipeline_default")
+            network = self.client.networks.get(docker_config.docker_network_name)
             network.connect(self.container)
 
             self._wait_for_container()

@@ -133,8 +133,6 @@ export const useUserManagement = () => {
   };
 
   const handleDeleteUser = async (userId) => {
-    if (!window.confirm('Are you sure you want to delete this user?')) return;
-    
     try {
       const response = await adminAPI.deleteUser(userId);
       toast.success('User deleted successfully');
@@ -160,8 +158,6 @@ export const useUserManagement = () => {
 
   const handleBulkDelete = async () => {
     if (selectedUsers.length === 0) return;
-    if (!window.confirm(`Are you sure you want to delete ${selectedUsers.length} users?`)) return;
-    
     try {
       const response = await adminAPI.bulkDeleteUsers(selectedUsers);
       toast.success(`${selectedUsers.length} users deleted successfully`);
@@ -264,6 +260,7 @@ export const useUserManagement = () => {
     checkIsAdmin,
     setShowCreateDialog,
     setShowEditDialog,
+    setEditingUser,
     setFormData,
     handleCreateUser,
     handleUpdateUser,

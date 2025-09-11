@@ -8,6 +8,7 @@ import {
 import PageHeader from '../../components/common/PageHeader';
 import UserFilters from '../../components/features/UserManagement/UserFilters';
 import UserTable from '../../components/features/UserManagement/UserTable';
+import UserModal from '../../components/features/UserManagement/UserModal';
 import Pagination from '../../components/common/Pagination/Pagination';
 
 export const UserManagementDisplay = ({
@@ -30,6 +31,7 @@ export const UserManagementDisplay = ({
   checkIsAdmin,
   setShowCreateDialog,
   setShowEditDialog,
+  setEditingUser,
   setFormData,
   handleCreateUser,
   handleUpdateUser,
@@ -72,7 +74,10 @@ export const UserManagementDisplay = ({
         title='User Management'
         subtitle='Manage users, roles, and permissions'
         actions={
-          <Button onClick={() => setShowCreateDialog(true)}>
+          <Button 
+            onClick={() => setShowCreateDialog(true)}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+          >
             <Plus className="w-4 h-4 mr-2" />
             Create User
           </Button>
@@ -144,6 +149,31 @@ export const UserManagementDisplay = ({
           </div>
         </div>
       )}
+
+      {/* Create User Modal */}
+      <UserModal
+        isOpen={showCreateDialog}
+        onClose={() => setShowCreateDialog(false)}
+        title="Create New User"
+        formData={formData}
+        setFormData={setFormData}
+        onSubmit={handleCreateUser}
+        isEdit={false}
+      />
+
+      {/* Edit User Modal */}
+      <UserModal
+        isOpen={showEditDialog}
+        onClose={() => {
+          setShowEditDialog(false);
+          setEditingUser(null);
+        }}
+        title="Edit User"
+        formData={formData}
+        setFormData={setFormData}
+        onSubmit={handleUpdateUser}
+        isEdit={true}
+      />
     </div>
   );
 };

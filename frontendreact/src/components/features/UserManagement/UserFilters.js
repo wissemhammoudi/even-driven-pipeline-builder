@@ -11,19 +11,26 @@ const UserFilters = ({
   onClearFilters
 }) => (
   <>
-    <div className='flex flex-wrap gap-4 items-end'>
-      <SearchFilter searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
-      <div className='flex items-center space-x-2'>
-        <label className='text-sm font-medium text-gray-700'>Role:</label>
-        <select
-          value={roleFilter || ''}
-          onChange={(e) => setRoleFilter(e.target.value || null)}
-          className='block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm'
-        >
-          <option value="">All Roles</option>
-          <option value="admin">Admin</option>
-          <option value="user">User</option>
-        </select>
+    <div className='bg-white shadow rounded-lg p-4'>
+      <div className='flex flex-wrap gap-6 items-end'>
+        <div className='flex-1 min-w-64'>
+          <SearchFilter searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+        </div>
+        <div className='flex flex-col space-y-1'>
+          <label htmlFor="role-filter" className="block text-sm font-medium text-gray-700">
+            Role Filter
+          </label>
+          <select
+            id="role-filter"
+            value={roleFilter || ''}
+            onChange={(e) => setRoleFilter(e.target.value || null)}
+            className='w-48 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500'
+          >
+            <option value="">All Roles</option>
+            <option value="admin">Admin</option>
+            <option value="user">User</option>
+          </select>
+        </div>
       </div>
     </div>
     <ActiveFiltersIndicator

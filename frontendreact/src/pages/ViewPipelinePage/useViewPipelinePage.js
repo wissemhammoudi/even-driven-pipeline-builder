@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import useAuthStore from '../../store/authStore'
 import usePipelineStore from '../../store/pipelineStore'
-import { schemaChangeAPI } from '../../utils/api'
+import { schemaChangeAPI, cdcAPI } from '../../utils/api'
 
 export function useViewPipelinePage() {
   const { pipelineId } = useParams()
@@ -37,6 +37,9 @@ export function useViewPipelinePage() {
   const [breakingChanges, setBreakingChanges] = useState([])
   const [isBlockedByBreakingChange, setIsBlockedByBreakingChange] = useState(false)
   const [showBreakingChanges, setShowBreakingChanges] = useState(false)
+  const [cdcMonitoringStatus, setCdcMonitoringStatus] = useState(null)
+  const [isCdcStarting, setIsCdcStarting] = useState(false)
+  const [isCdcStopping, setIsCdcStopping] = useState(false)
 
   const safePipeline = useMemo(() => pipeline || {}, [pipeline])
   const safePipelineSteps = useMemo(() => pipelineSteps || [], [pipelineSteps])
@@ -61,6 +64,13 @@ export function useViewPipelinePage() {
           setBreakingChanges([])
           setIsBlockedByBreakingChange(false)
         })
+      
+      const statusId = Number(safePipeline.pipeline_id ?? pipelineId)
+      if (Number.isInteger(statusId)) {
+        cdcAPI.getSchemaMonitoringStatus(statusId)
+          .then(res => setCdcMonitoringStatus(res.data))
+          .catch(() => setCdcMonitoringStatus(null))
+      }
     }
     return () => resetCurrentPipeline()
   }, [pipelineId, user?.user_id, loadPipelineData, loadPermissions, resetCurrentPipeline])
@@ -110,6 +120,62 @@ export function useViewPipelinePage() {
     navigate('/pipeline-management')
   }, [navigate])
 
+  const handleStartCdcMonitoring = useCallback(async () => {
+    if (!safePipeline.pipeline_id) return
+    const numericId = Number(safePipeline.pipeline_id)
+    if (!Number.isInteger(numericId)) {
+      console.error('Invalid pipeline id for CDC start')
+      return
+    }
+    
+    setIsCdcStarting(true)
+    try {
+      const result = await cdcAPI.startSchemaMonitoring(numericId)
+      if (result.data?.success) {
+        setCdcMonitoringStatus(result.data)
+        // Refresh schema changes after starting monitoring
+        schemaChangeAPI.getSchemaChanges(String(numericId))
+          .then(res => setSchemaChanges(res.data || []))
+          .catch(() => setSchemaChanges([]))
+        
+        // Refresh the page to update pipeline data
+        setTimeout(() => {
+          window.location.reload()
+        }, 1000)
+      }
+    } catch (error) {
+      console.error('Failed to start CDC monitoring:', error)
+    } finally {
+      setIsCdcStarting(false)
+    }
+  }, [safePipeline.pipeline_id])
+
+  const handleStopCdcMonitoring = useCallback(async () => {
+    if (!safePipeline.pipeline_id) return
+    const numericId = Number(safePipeline.pipeline_id)
+    if (!Number.isInteger(numericId)) {
+      console.error('Invalid pipeline id for CDC stop')
+      return
+    }
+    
+    setIsCdcStopping(true)
+    try {
+      const result = await cdcAPI.stopSchemaMonitoring(numericId)
+      if (result.data?.success) {
+        setCdcMonitoringStatus(result.data)
+        
+        // Refresh the page to update pipeline data
+        setTimeout(() => {
+          window.location.reload()
+        }, 1000)
+      }
+    } catch (error) {
+      console.error('Failed to stop CDC monitoring:', error)
+    } finally {
+      setIsCdcStopping(false)
+    }
+  }, [safePipeline.pipeline_id])
+
   return {
     pipelineId,
     user,
@@ -137,6 +203,9 @@ export function useViewPipelinePage() {
     isBlockedByBreakingChange,
     showBreakingChanges,
     setShowBreakingChanges,
+    cdcMonitoringStatus,
+    isCdcStarting,
+    isCdcStopping,
     handleRunPipeline,
     handleStartVisualization,
     handleDeletePipeline,
@@ -145,6 +214,8 @@ export function useViewPipelinePage() {
     handleCloseDeleteConfirm,
     stopVisualization,
     handleBackToDashboard,
-    handleBackToPipelines
+    handleBackToPipelines,
+    handleStartCdcMonitoring,
+    handleStopCdcMonitoring
   }
 } 

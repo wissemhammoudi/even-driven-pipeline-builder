@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { XCircleIcon, ArrowLeftIcon, PlayIcon, TrashIcon, ComputerDesktopIcon, UsersIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { XCircleIcon, ArrowLeftIcon, PlayIcon, TrashIcon, ComputerDesktopIcon, UsersIcon, ExclamationTriangleIcon, ChartBarIcon, StopIcon } from '@heroicons/react/24/outline'
 import PipelineModalsManager from '../../components/features/ViewPipelinePage/PipelineModalsManager'
 import PageHeader from '../../components/common/PageHeader'
 import PipelineInformation from '../../components/features/ViewPipelinePage/PipelineInformation'
@@ -46,7 +46,12 @@ const ViewPipelinePage = () => {
     handleCloseDeleteConfirm,
     stopVisualization,
     handleBackToDashboard,
-    handleBackToPipelines
+    handleBackToPipelines,
+    cdcMonitoringStatus,
+    isCdcStarting,
+    isCdcStopping,
+    handleStartCdcMonitoring,
+    handleStopCdcMonitoring
   } = useViewPipelinePage()
 
   const hasVisualizationStep = useMemo(
@@ -71,6 +76,18 @@ const ViewPipelinePage = () => {
   const isLoadingPermissions = useMemo(() => {
     return safePermissions.loading === true
   }, [safePermissions.loading])
+
+  const statusColorClass = useMemo(() => {
+    const status = (safePipeline.status || '').toUpperCase()
+    if (status === 'RUNNING') return 'bg-green-500'
+    if (status === 'BROKEN') return 'bg-red-500'
+    if (status === 'STOPPED') return 'bg-orange-500'
+    return 'bg-gray-300'
+  }, [safePipeline.status])
+
+  const isPipelineRunning = useMemo(() => {
+    return (safePipeline.status || '').toUpperCase() === 'RUNNING'
+  }, [safePipeline.status])
 
   if (isLoadingData) {
     return (
@@ -127,21 +144,52 @@ const ViewPipelinePage = () => {
       <SchemaChangeAlert breakingChanges={breakingChanges} schemaChanges={schemaChanges} />
       <div className='space-y-6'>
         <PageHeader
-          title={safePipeline.name}
+          title={(
+            <div className='flex items-center'>
+              <span className={`inline-block h-3 w-3 rounded-full mr-2 ${statusColorClass}`}></span>
+              {safePipeline.name}
+            </div>
+          )}
           onBackClick={handleBackToDashboard}
           backIcon={ArrowLeftIcon}
           actions={
             <>
               {!safePipeline.is_deprecated && (
                 <>
+                  {safePermissions.can_start_pipeline && (
+                    <>
+                      {(isPipelineRunning || cdcMonitoringStatus?.enabled) ? (
+                        <Button
+                          onClick={handleStopCdcMonitoring}
+                          disabled={isCdcStopping}
+                          variant='secondary'
+                          icon={StopIcon}
+                          iconPosition='left'
+                          className='border-red-300 text-red-700 hover:bg-red-50 focus:ring-red-500'
+                        >
+                          {isCdcStopping ? 'Stopping...' : 'Stop Pipeline'}
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={handleStartCdcMonitoring}
+                          disabled={isCdcStarting}
+                          icon={ChartBarIcon}
+                          iconPosition='left'
+                        >
+                          {isCdcStarting ? 'Starting...' : 'Start Pipeline'}
+                        </Button>
+                      )}
+                    </>
+                  )}
+
                   {hasIngestOrTransformStep && safePermissions.can_start_pipeline && (
                     <Button
                       onClick={handleRunPipeline}
-                      disabled={isRunning || (breakingChanges && breakingChanges.length > 0)}
+                      disabled={isRunning || isPipelineRunning || (breakingChanges && breakingChanges.length > 0)}
                       icon={PlayIcon}
                       iconPosition='left'
                     >
-                      {isRunning ? 'Starting...' : 'Start Pipeline'}
+                      {isRunning ? 'Testing...' : isPipelineRunning ? 'Pipeline Running' : 'Test Pipeline'}
                     </Button>
                   )}
 
