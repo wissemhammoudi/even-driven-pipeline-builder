@@ -168,10 +168,6 @@ export const supersetAPI = {
 }
 
 export const schemaChangeAPI = {
-<<<<<<< Updated upstream
-  getSchemaChanges: (pipelineId) => api.get(`/change-detection/schema-changes/pipeline/${pipelineId}`),
-  getBreakingChanges: (pipelineId) => api.get(`/change-detection/schema-changes/pipeline/${pipelineId}/breaking`)
-=======
   getSchemaChanges: (pipelineId) => api.get(`/change-detection/schema-changes/detect`, { params: { pipeline_id: pipelineId } }),
   getBreakingChanges: (pipelineId) => api.get(`/change-detection/schema-changes/detect`, { params: { pipeline_id: pipelineId } })
 }
@@ -200,7 +196,6 @@ export const cdcAPI = {
   },
   listKafkaTopics: () => api.get('/api/v1/cdc/kafka/topics'),
   getKafkaTopicInfo: (topicName) => api.get(`/api/v1/cdc/kafka/topics/${encodeURIComponent(topicName)}`)
->>>>>>> Stashed changes
 }
 
 export const pipelineStepAPI = {

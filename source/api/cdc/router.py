@@ -15,9 +15,7 @@ async def get_cdc_service_dependency() -> CDCService:
     """Get CDC service dependency"""
     service = get_cdc_service()
     if not service._is_initialized:
-        print("[CDC DEPENDENCY] Initializing CDC service...")
         await service.initialize()
-        print("[CDC DEPENDENCY] CDC service initialized successfully")
     else:
         print("[CDC DEPENDENCY] CDC service already initialized")
     return service

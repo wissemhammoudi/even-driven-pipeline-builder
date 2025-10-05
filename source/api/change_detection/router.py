@@ -5,7 +5,6 @@ from source.schema.change_detection.schema import SchemaChangeEventSchema
 
 schema_change_detection_router = APIRouter(prefix="/change-detection")
 
-# Add the endpoint that frontend is calling
 @schema_change_detection_router.get("/schema-changes/detect")
 async def detect_schema_changes(pipeline_id: Optional[int] = Query(None)):
     """
@@ -14,7 +13,6 @@ async def detect_schema_changes(pipeline_id: Optional[int] = Query(None)):
     service = ChangeDetectionService()
     
     if pipeline_id:
-        # Get schema changes for specific pipeline
         events = service.get_schema_changes_by_pipeline(pipeline_id)
         return {
             "pipeline_id": pipeline_id,
@@ -22,7 +20,6 @@ async def detect_schema_changes(pipeline_id: Optional[int] = Query(None)):
             "total_changes": len(events)
         }
     else:
-        # Get all schema changes
         all_events = service.get_all_schema_changes()
         return {
             "events": all_events,

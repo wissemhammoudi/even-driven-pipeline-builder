@@ -1,4 +1,3 @@
-import logging
 from datetime import datetime
 from typing import List
 from source.models.pipeline.models import Pipeline
@@ -12,12 +11,9 @@ from source.schema.step_configuration_association.schema import StepConfiguratio
 from source.service.PipelineManager.pipelineManager import PipelineManager
 from source.service.dashboard_pipeline_association.service import DashboardPipelineAssociationService
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-
 class PipelineService:
+
+    
     def __init__(self):
         self.pipeline_repository = PipelineRepository()
         self.step_service = PipelineStepService()
@@ -56,27 +52,15 @@ class PipelineService:
         pipelines = self.pipeline_repository.get_active_pipeline_by_user_id(user_id)
         return pipelines
     def create_pipeline(self, pipeline_data: PipelineCreate):
-        logger.info(f"🚀 Starting pipeline creation: {pipeline_data.name}")
-        logger.info(f"👤 Created by: {pipeline_data.created_by}")
-        logger.info(f"📝 Description: {pipeline_data.description}")
-        logger.info(f"📋 Number of steps: {len(pipeline_data.step_list)}")
-        
         if not pipeline_data.name or not pipeline_data.step_list:
-            logger.error("❌ Pipeline name and at least one step are required")
             return {"error": "Pipeline name and at least one step are required"}, 400
 
-        logger.info("🔍 Validating step configurations...")
         for step in pipeline_data.step_list:
-            logger.info(f"🔧 Validating step: {step.name}")
             if not step.step_config.get("tool"):
-                logger.error(f"❌ Step {step.name} is missing tool configuration")
                 return {"error": f"Step {step.name} is missing tool configuration"}, 400
             if not step.step_config.get("config_ids"):
-                logger.error(f"❌ Step {step.name} is missing config_ids")
                 return {"error": f"Step {step.name} is missing config_ids"}, 400
-            logger.info(f"✅ Step {step.name} validation passed")
 
-        logger.info("💾 Creating pipeline in database...")
         pipeline = Pipeline(
                 name=pipeline_data.name,
                 description=pipeline_data.description,
@@ -84,16 +68,13 @@ class PipelineService:
                 created_at=datetime.utcnow()
             )
         pipeline_id = self.pipeline_repository.create_Pipeline(pipeline)
-        logger.info(f"✅ Pipeline created in database with ID: {pipeline_id}")
         
         Pipeline_init = PipelineManager()
         i=1
         error_message = None
         
         try:
-            logger.info("🔧 Creating pipeline steps...")
             for step_data in pipeline_data.step_list: 
-                logger.info(f"📝 Creating step {i}: {step_data.name}")
                 step = PipelineStepCreate(
                         name=step_data.name,
                         description=step_data.description,
@@ -105,61 +86,40 @@ class PipelineService:
                 i+=1    
                 step = self.step_service.create_step(step)
                 step_id = step.step_id
-                logger.info(f"✅ Step created with ID: {step_id}")
                 
-                logger.info(f"🔗 Creating configuration associations for step {step_id}...")
                 for config_id in step_data.config_ids:
                     config_association = StepConfigurationAssociationCreate(
                             step_id=step_id,
                             step_config_id=config_id
                         )
                     self.StepConfigurationAssociation.add_association(config_association)
-                    logger.info(f"✅ Association created: step {step_id} -> config {config_id}")
             
-            logger.info("🔍 Checking for visualization steps...")
             has_visualization_step = any(
                 step_data.step_config.get("config_type") == StepTypeEnum.DATA_VISUALIZATION 
                 for step_data in pipeline_data.step_list
             )
-            logger.info(f"📊 Has visualization step: {has_visualization_step}")
             
-            logger.info("🏗️ Setting up pipeline manager...")
             for step_data in pipeline_data.step_list:
                 github_repo_name = f"{pipeline_data.name}_{pipeline_id}_{step_data.order}"
-                logger.info(f"🔧 Processing step with GitHub repo: {github_repo_name}")
-                logger.info(f"🛠️ Tool: {step_data.step_config['tool']}")
                 
                 runner = Pipeline_init.get_runner(str(step_data.step_config["tool"]))
-                logger.info(f"🏃 Runner type: {type(runner).__name__}")
                 
                 is_visual = step_data.step_config.get("config_type") == StepTypeEnum.DATA_VISUALIZATION
-                logger.info(f"📊 Is visualization step: {is_visual}")
                 
                 Pipeline_init.add_step(github_repo_name, runner, step_data, is_visual)
-                logger.info(f"✅ Step added to pipeline manager: {github_repo_name}")
             
-            logger.info("🚀 Creating pipeline with Docker and GitHub...")
             dashboard_id = Pipeline_init.create_pipeline()
-            logger.info(f"📊 Dashboard ID returned: {dashboard_id}")
             
             if has_visualization_step and dashboard_id:
-                logger.info(f"🔗 Creating dashboard association: pipeline {pipeline_id} -> dashboard {dashboard_id}")
                 self.dashboard_pipeline_association.create_association(pipeline_id, dashboard_id)
-                logger.info("✅ Dashboard association created")
             
-            logger.info(f"🎉 Pipeline '{pipeline_data.name}' created successfully with ID: {pipeline_id}")
             return {"message": "Pipeline created successfully", "pipeline_id": pipeline_id}, 201
             
         except Exception as e:
-            logger.error(f"❌ Error during pipeline creation: {str(e)}")
-            logger.error(f"📊 Pipeline ID: {pipeline_id}, Steps: {len(pipeline_data.step_list)}")
-            
             try:
-                logger.info("🧹 Attempting cleanup...")
                 Pipeline_init.cleanup()
-                logger.info("✅ Cleanup completed")
             except Exception as cleanup_error:
-                logger.error(f"❌ Error during cleanup: {str(cleanup_error)}")
+                pass
             
             error_message = str(e) if not error_message else error_message
             return {

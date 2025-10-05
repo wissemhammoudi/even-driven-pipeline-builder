@@ -139,9 +139,8 @@ class RedisConfig(BaseSettings):
 
 class TriggerConditionsConfig(BaseSettings):
     default_threshold_value: int = Field(env="DEFAULT_THRESHOLD_VALUE", default=3)
-    cooldown_period: int = Field(env="COOLDOWN_PERIOD", default=60)  # in seconds
+    cooldown_period: int = Field(env="COOLDOWN_PERIOD", default=60) 
 
->>>>>>> Stashed changes
 application_user_init_config = ApplicationUserInitConfig()
 external_services_config = ExternalServicesConfig()
 api_config = APIConfig()

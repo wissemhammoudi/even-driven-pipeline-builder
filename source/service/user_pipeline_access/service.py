@@ -46,74 +46,36 @@ class UserPipelineAccessService:
             return []
         
     def _update_superset_dashboard_owners(self, pipeline_id: int, user_ids: list, add: bool):
-        import logging
-        logger = logging.getLogger(__name__)
-        
         result = None
         try:
-            logger.info(f"🔍 Looking for dashboard associations for pipeline {pipeline_id}")
             dashboard_assocs = self.dashboard_pipeline_association.get_by_pipeline_id(pipeline_id)
-            
             if dashboard_assocs:
                 dashboard_id = dashboard_assocs[0].dashboard_id
-                logger.info(f"📊 Found dashboard ID: {dashboard_id}")
-                
                 superset_user_ids = []
-                logger.info(f"👥 Processing {len(user_ids)} user IDs for Superset mapping")
-                
                 for user_id in user_ids:
-                    logger.info(f"🔍 Looking up Superset account for user {user_id}")
                     assocs = self.user_superset_account_association_service.get_by_user_id(user_id)
-                    logger.info(f"📋 Found {len(assocs)} Superset associations for user {user_id}")
                     superset_user_ids.extend([a.superset_user_id for a in assocs])
-                
-                logger.info(f"🎯 Total Superset user IDs: {superset_user_ids}")
-                
                 if superset_user_ids:
-                    logger.info(f"🔐 Authenticating with Superset client")
                     auth_result = self.superset_client.authenticate()
-                    logger.info(f"🔐 Superset authentication result: {auth_result}")
-                    
                     if auth_result:
-                        logger.info(f"✅ Successfully authenticated with Superset")
-                        logger.info(f"👥 Updating dashboard owners: {superset_user_ids}, add={add}")
                         result = self.superset_client.update_dashboard_owners(dashboard_id, superset_user_ids, add=add)
-                        logger.info(f"📡 Superset update result: {result}")
-                        
                         if result is not None and isinstance(result, dict) and 'success' in result:
-                            logger.info(f"✅ Superset dashboard owners updated successfully")
                             return result
                         else:
-                            logger.error(f"❌ Unexpected response from Superset client: {result}")
                             return {"success": False, "error": "Unexpected response from Superset client"}
                     else:
-                        logger.error(f"❌ Failed to authenticate with Superset")
                         return {"success": False, "error": "Failed to authenticate with Superset"}
                 else:
-                    logger.warning(f"⚠️ No Superset users found for given user_ids: {user_ids}")
                     return {"success": False, "error": "No superset users found for given user_ids"}
             else:
-                logger.warning(f"⚠️ No dashboard found for pipeline {pipeline_id}")
                 return {"success": False, "error": "No dashboard found for given pipeline_id"}
         except Exception as e:
-            logger.error(f"❌ Exception in _update_superset_dashboard_owners: {str(e)}")
-            import traceback
-            logger.error(f"📊 Traceback: {traceback.format_exc()}")
             return {"success": False, "error": str(e)}
         
     def bulk_grant_access(self, pipeline_id: int, user_ids: List[str], grant_type: GrantType, granted_by: str) -> List[UserPipelineAccessResponse]:
-        import logging
-        logger = logging.getLogger(__name__)
-        
-        logger.info(f"🔧 Starting bulk grant access for pipeline {pipeline_id}")
-        logger.info(f"👥 User IDs: {user_ids}")
-        logger.info(f"🎯 Grant type: {grant_type}")
-        logger.info(f"👤 Granted by: {granted_by}")
-        
         results = []
         for user_id in user_ids:
             try:
-                logger.info(f"📝 Processing access for user {user_id}")
                 access_data = UserPipelineAccessCreate(
                     user_id=user_id,
                     pipeline_id=pipeline_id,
@@ -122,7 +84,6 @@ class UserPipelineAccessService:
                 )
                 existing_access = self.access_repository.get_access_by_user_and_pipeline(user_id, pipeline_id)
                 if existing_access:
-                    logger.info(f"🔄 Updating existing access for user {user_id}")
                     updated_access = self.access_repository.update_access(
                         user_id,
                         pipeline_id,
@@ -131,7 +92,6 @@ class UserPipelineAccessService:
                     )
                     results.append(UserPipelineAccessResponse.from_orm(updated_access))
                 else:
-                    logger.info(f"➕ Creating new access for user {user_id}")
                     new_access = UserPipelineAccess(
                         user_id=user_id,
                         pipeline_id=pipeline_id,
@@ -141,27 +101,15 @@ class UserPipelineAccessService:
                     created_access = self.access_repository.create_access(new_access)
                     results.append(UserPipelineAccessResponse.from_orm(created_access))
             except Exception as e:
-                logger.error(f"❌ Error processing access for user {user_id}: {str(e)}")
                 continue
-        
-        logger.info(f"📊 Database access operations completed. Results: {len(results)}")
-        
         try:
-            logger.info(f"🌐 Updating Superset dashboard owners for pipeline {pipeline_id}")
             result = self._update_superset_dashboard_owners(pipeline_id, user_ids, add=True)
-            logger.info(f"📡 Superset update result: {result}")
-            
             if not result.get("success"):
-                logger.warning(f"⚠️ Superset dashboard update failed: {result.get('error')}")
-                # Don't raise exception, just log the warning
-                logger.warning("⚠️ Continuing without Superset dashboard update")
+                pass
             else:
-                logger.info("✅ Superset dashboard owners updated successfully")
+                pass
         except Exception as e:
-            logger.error(f"❌ Exception during Superset dashboard update: {str(e)}")
-            logger.warning("⚠️ Continuing without Superset dashboard update")
-
-        logger.info(f"🎉 Bulk grant access completed successfully. {len(results)} users processed.")
+            pass
         return results
 
     def bulk_revoke_access(self, pipeline_id: int, user_ids: List[str]) -> Dict[str, int]:

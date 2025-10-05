@@ -1,4 +1,3 @@
-import logging
 from typing import Dict, Any, Optional
 from fastapi import HTTPException
 from source.service.PipelineManager.dockermanager import DockerManager
@@ -13,9 +12,7 @@ from source.schema.pipeline.schema import ToolEnum, StepTypeEnum
 from source.config.config import docker_config
 from source.service.user.services import UserService
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+
 class PipelineManager:
     """Unified pipeline manager that orchestrates Docker and Git operations"""
     
@@ -107,136 +104,94 @@ class PipelineManager:
         if self.docker_manager.container:
             try:
                 self.docker_manager.stop_container()
-                logger.info(f"Container stopped and removed successfully")
             except Exception as e:
-                logger.error(f"Error during container cleanup: {e}")
+                pass
     
     def cleanup(self):
         """Public cleanup method for external use"""
-        logger.info("🧹 Starting pipeline cleanup...")
         self._cleanup_container()
-        logger.info("✅ Pipeline cleanup completed")
 
     def create_pipeline(self):
         """Creates pipeline with port exposure"""
-        logger.info("🚀 Starting pipeline creation process")
         
         if not self.steps:
-            logger.error("❌ No steps found. Add steps first.")
             raise HTTPException(status_code=400, detail="No steps found. Add steps first.")
         
-        logger.info(f"📋 Pipeline has {len(self.steps)} steps: {list(self.steps.keys())}")
         
         try:
             first_step_name, first_step = self._get_first_step()
-            logger.info(f"🎯 First step: {first_step_name}")
             
             dashboard_id=None
             tool_type = first_step['config'].step_config.get('tool')
-            logger.info(f"🔧 Tool type: {tool_type}")
             
             image = self.get_image(tool_type)
-            logger.info(f"🐳 Docker image: {image}")
             
-            logger.info(f"📦 Creating Docker container: {first_step_name}")
             container = self.docker_manager.create_container(first_step_name, image, None)
             self.name = first_step_name
             
-            logger.info("🔗 Setting up runners for all steps...")
             for name, step in self.steps.items():
-                logger.info(f"⚙️ Configuring runner for step: {name}")
                 step["runner"].container = container
                 step["runner"].docker_manager = self.docker_manager  
 
-            logger.info("🎛️ Configuring step runners...")
             for name, step in self.steps.items():
                 runner = step["runner"]
-                logger.info(f"🔧 Configuring step '{name}' with runner: {type(runner).__name__}")
                 try:
                     if isinstance(runner, SupersetRunner):
-                        logger.info(f"📊 Configuring Superset dashboard for step: {name}")
                         dashboard_id = runner.config(step, name)
-                        logger.info(f"📊 Dashboard ID: {dashboard_id}")
                     else:
                         runner.config(step, name)
                 except Exception as e:
-                    logger.error(f"❌ Error configuring step '{name}': {str(e)}")
                     if isinstance(runner, SupersetRunner):
-                        logger.warning(f"⚠️ Superset configuration failed for step '{name}', continuing without dashboard")
                         dashboard_id = None
                     else:
                         raise  # Re-raise for non-Superset errors
                 
             container_name = f"{first_step_name.split('_')[0]}_{first_step_name.split('_')[1]}"
             workdir = f"/project/{container_name}"
-            logger.info(f"📁 Container name: {container_name}")
-            logger.info(f"📁 Working directory: {workdir}")
             
-            logger.info("🌐 Pushing to GitHub...")
             try:
                 self.git_manager.push_to_github(self.docker_manager.get_container_name(), workdir)
-                logger.info("✅ GitHub push completed successfully")
             except Exception as e:
-                logger.error(f"❌ GitHub push failed: {str(e)}")
-                logger.warning("⚠️ Continuing pipeline creation despite GitHub push failure")
+                pass
             
-            logger.info(f"✅ Pipeline '{first_step_name}' created successfully!")
             self._cleanup_container()
             return dashboard_id
             
         except Exception as e:
-            logger.error(f"❌ Error occurred while creating pipeline: {str(e)}")
-            logger.error(f"📊 Pipeline name: {self.name}, Steps: {list(self.steps.keys()) if self.steps else 'None'}")
             self._cleanup_container()
             raise
 
     def run_pipeline(self):
         """Run the pipeline and its steps"""
-        logger.info("🏃 Starting pipeline execution")
         
         try:
             if not self.steps:
-                logger.error("❌ No steps defined in pipeline")
                 raise RuntimeError("No steps defined in pipeline")
             
             first_step_name, first_step = self._get_first_step()
-            logger.info(f"🎯 First step: {first_step_name}")
             
             tool_type = first_step['config'].step_config.get('tool')
             image = self.get_image(tool_type)
-            logger.info(f"🔧 Tool type: {tool_type}, Image: {image}")
             
-            logger.info(f"🐳 Starting container for pipeline '{first_step_name}'...")
             container = self.docker_manager.create_container(first_step_name, image, None)
             
-            logger.info("🔗 Setting up runners for non-visualization steps...")
             for name, step in self.steps.items():
                 if step.get('isvisual'):
-                    logger.info(f"⏭️ Skipping visualization step '{name}' during pipeline run")
                     continue
-                logger.info(f"⚙️ Configuring runner for step: {name}")
                 step["runner"].container = container
                 step["runner"].docker_manager = self.docker_manager  
 
-            logger.info("📥 Pulling code from GitHub...")
             self.git_manager.pull_from_github(self.docker_manager.get_container_name())
             
-            logger.info("🏃 Executing pipeline steps...")
             for step_name, step_data in self.steps.items():
                 if step_data.get('isvisual'):
-                    logger.info(f"⏭️ Skipping visualization step '{step_name}' during pipeline run")
                     continue
                 
-                logger.info(f"🔄 Running step '{step_name}'...")
                 runner = step_data['runner']
                 runner.start(step_data, step_name)
-                logger.info(f"✅ Step '{step_name}' completed successfully")
             
-            logger.info("🎉 Pipeline execution completed successfully")
             self._cleanup_container()
             
         except Exception as e:
-            logger.error(f"❌ Error occurred while running pipeline: {str(e)}")
-            logger.error(f"📊 Pipeline name: {self.name}, Steps: {list(self.steps.keys()) if self.steps else 'None'}")
             self._cleanup_container()
             raise RuntimeError(f"Failed to run pipeline: {str(e)}")

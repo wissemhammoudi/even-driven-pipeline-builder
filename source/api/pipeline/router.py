@@ -131,7 +131,6 @@ def create_pipeline(
     current_user: dict = Depends(require_admin_role)
 ):
     try:
-        # Verify the user exists and has admin role
         user = user_service.get_user_by_id(pipeline_data.created_by)
         if not user:
             raise HTTPException(
@@ -150,14 +149,12 @@ def create_pipeline(
             try:
                 pipeline_id = response.get("pipeline_id")
                 if pipeline_id:
-                    # Initialize CDC service if not already initialized
                     import asyncio
                     loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(loop)
                     try:
                         init_result = loop.run_until_complete(cdc_service.initialize())
                         if init_result:
-                            # Start schema monitoring using CDC service with Debezium
                             schema_result = loop.run_until_complete(
                                 cdc_service.start_schema_monitoring(pipeline_id, pipeline_data.created_by)
                             )
@@ -209,7 +206,6 @@ def delete_pipeline(
 ):
     try:
         try:
-            # Stop schema monitoring using CDC service
             import asyncio
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
