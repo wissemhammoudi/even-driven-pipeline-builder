@@ -11,8 +11,9 @@ from source.schema.step_configuration_association.schema import StepConfiguratio
 from source.service.PipelineManager.pipelineManager import PipelineManager
 from source.service.dashboard_pipeline_association.service import DashboardPipelineAssociationService
 
-
 class PipelineService:
+
+    
     def __init__(self):
         self.pipeline_repository = PipelineRepository()
         self.step_service = PipelineStepService()
@@ -67,6 +68,7 @@ class PipelineService:
                 created_at=datetime.utcnow()
             )
         pipeline_id = self.pipeline_repository.create_Pipeline(pipeline)
+        
         Pipeline_init = PipelineManager()
         i=1
         error_message = None
@@ -99,13 +101,15 @@ class PipelineService:
             
             for step_data in pipeline_data.step_list:
                 github_repo_name = f"{pipeline_data.name}_{pipeline_id}_{step_data.order}"
-                print(f"Processing step with repo: {github_repo_name}")
+                
                 runner = Pipeline_init.get_runner(str(step_data.step_config["tool"]))
                 
                 is_visual = step_data.step_config.get("config_type") == StepTypeEnum.DATA_VISUALIZATION
+                
                 Pipeline_init.add_step(github_repo_name, runner, step_data, is_visual)
             
-            dashboard_id = Pipeline_init.create_pipeline()          
+            dashboard_id = Pipeline_init.create_pipeline()
+            
             if has_visualization_step and dashboard_id:
                 self.dashboard_pipeline_association.create_association(pipeline_id, dashboard_id)
             
@@ -115,7 +119,7 @@ class PipelineService:
             try:
                 Pipeline_init.cleanup()
             except Exception as cleanup_error:
-                print(f"Error during cleanup: {str(cleanup_error)}")
+                pass
             
             error_message = str(e) if not error_message else error_message
             return {

@@ -22,7 +22,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN pip install --no-cache-dir --upgrade pip
     
-RUN pip install psycopg2
+RUN pip install psycopg2-binary thrift-sasl pyhive shillelagh[gsheets] apache-superset[gsheets]
 COPY superset_config.py /app/pythonpath/
 
 EXPOSE 8088

@@ -11,6 +11,8 @@ from source.service.PipelineManager.superset import SupersetRunner
 from source.schema.pipeline.schema import ToolEnum, StepTypeEnum
 from source.config.config import docker_config
 from source.service.user.services import UserService
+
+
 class PipelineManager:
     """Unified pipeline manager that orchestrates Docker and Git operations"""
     
@@ -102,19 +104,26 @@ class PipelineManager:
         if self.docker_manager.container:
             try:
                 self.docker_manager.stop_container()
-                print(f"Container stopped and removed successfully")
             except Exception as e:
-                print(f"Error during container cleanup: {e}")
+                pass
+    
+    def cleanup(self):
+        """Public cleanup method for external use"""
+        self._cleanup_container()
 
     def create_pipeline(self):
         """Creates pipeline with port exposure"""
+        
         if not self.steps:
             raise HTTPException(status_code=400, detail="No steps found. Add steps first.")
         
+        
         try:
             first_step_name, first_step = self._get_first_step()
+            
             dashboard_id=None
             tool_type = first_step['config'].step_config.get('tool')
+            
             image = self.get_image(tool_type)
             
             container = self.docker_manager.create_container(first_step_name, image, None)
@@ -126,24 +135,35 @@ class PipelineManager:
 
             for name, step in self.steps.items():
                 runner = step["runner"]
-                if isinstance(runner, SupersetRunner):
-                    dashboard_id = runner.config(step, name)
-                else:
-                    runner.config(step, name)
+                try:
+                    if isinstance(runner, SupersetRunner):
+                        dashboard_id = runner.config(step, name)
+                    else:
+                        runner.config(step, name)
+                except Exception as e:
+                    if isinstance(runner, SupersetRunner):
+                        dashboard_id = None
+                    else:
+                        raise  # Re-raise for non-Superset errors
                 
             container_name = f"{first_step_name.split('_')[0]}_{first_step_name.split('_')[1]}"
             workdir = f"/project/{container_name}"
-            self.git_manager.push_to_github(self.docker_manager.get_container_name(), workdir)
-            print(f"Pipeline '{first_step_name}' created successfully!")
+            
+            try:
+                self.git_manager.push_to_github(self.docker_manager.get_container_name(), workdir)
+            except Exception as e:
+                pass
+            
             self._cleanup_container()
             return dashboard_id
             
         except Exception as e:
-            print(f"Error occurred while creating pipeline:{e}")
             self._cleanup_container()
+            raise
 
     def run_pipeline(self):
         """Run the pipeline and its steps"""
+        
         try:
             if not self.steps:
                 raise RuntimeError("No steps defined in pipeline")
@@ -153,12 +173,10 @@ class PipelineManager:
             tool_type = first_step['config'].step_config.get('tool')
             image = self.get_image(tool_type)
             
-            print(f"Starting container for pipeline '{first_step_name}'...")
             container = self.docker_manager.create_container(first_step_name, image, None)
             
             for name, step in self.steps.items():
                 if step.get('isvisual'):
-                    print(f"Skipping visualization step '{name}' during pipeline run")
                     continue
                 step["runner"].container = container
                 step["runner"].docker_manager = self.docker_manager  
@@ -167,18 +185,13 @@ class PipelineManager:
             
             for step_name, step_data in self.steps.items():
                 if step_data.get('isvisual'):
-                    print(f"Skipping visualization step '{step_name}' during pipeline run")
                     continue
                 
-                print(f"Running step '{step_name}'...")
                 runner = step_data['runner']
                 runner.start(step_data, step_name)
-                print(f"Step '{step_name}' completed successfully")
             
-            print("Pipeline execution completed successfully")
             self._cleanup_container()
             
         except Exception as e:
-            print(f"Error occurred while running pipeline: {e}")
             self._cleanup_container()
             raise RuntimeError(f"Failed to run pipeline: {str(e)}")

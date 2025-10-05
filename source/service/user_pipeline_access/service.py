@@ -56,12 +56,15 @@ class UserPipelineAccessService:
                     assocs = self.user_superset_account_association_service.get_by_user_id(user_id)
                     superset_user_ids.extend([a.superset_user_id for a in assocs])
                 if superset_user_ids:
-                    self.superset_client.authenticate()
-                    result = self.superset_client.update_dashboard_owners(dashboard_id, superset_user_ids, add=add)
-                    if result is not None and isinstance(result, dict) and 'success' in result:
-                        return result
+                    auth_result = self.superset_client.authenticate()
+                    if auth_result:
+                        result = self.superset_client.update_dashboard_owners(dashboard_id, superset_user_ids, add=add)
+                        if result is not None and isinstance(result, dict) and 'success' in result:
+                            return result
+                        else:
+                            return {"success": False, "error": "Unexpected response from Superset client"}
                     else:
-                        return {"success": False, "error": "Unexpected response from Superset client"}
+                        return {"success": False, "error": "Failed to authenticate with Superset"}
                 else:
                     return {"success": False, "error": "No superset users found for given user_ids"}
             else:
@@ -97,12 +100,16 @@ class UserPipelineAccessService:
                     )
                     created_access = self.access_repository.create_access(new_access)
                     results.append(UserPipelineAccessResponse.from_orm(created_access))
-            except Exception:
+            except Exception as e:
                 continue
-        result = self._update_superset_dashboard_owners(pipeline_id, user_ids, add=True)
-        if not result.get("success"):
-            raise Exception(f"Failed to update Superset dashboard owners for pipeline {pipeline_id}{result.get('error')}")
-
+        try:
+            result = self._update_superset_dashboard_owners(pipeline_id, user_ids, add=True)
+            if not result.get("success"):
+                pass
+            else:
+                pass
+        except Exception as e:
+            pass
         return results
 
     def bulk_revoke_access(self, pipeline_id: int, user_ids: List[str]) -> Dict[str, int]:

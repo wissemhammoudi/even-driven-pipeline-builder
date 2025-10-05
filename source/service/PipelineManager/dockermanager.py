@@ -3,6 +3,7 @@ import time
 from typing import Dict, Any, Optional
 from source.config.config import docker_config
 
+
 class DockerManager:
     """Manages Docker container operations"""
     
@@ -37,22 +38,21 @@ class DockerManager:
         return container_config
 
     def create_container(self, name: str, image: str, port: Optional[int] = None):
-        """Create and start a Docker container"""
+        """Create and start a Docker container"""   
         try:
             container_config = self._create_container_config(name, image, port)
             
             container_id = self.client.containers.run(**container_config)
             self.container = self.client.containers.get(container_id.id)
             
-            network = self.client.networks.get("near-realtime-data-pipeline_default")
+            logger.info(f"🌐 Connecting to network: {docker_config.docker_network_name}")
+            network = self.client.networks.get(docker_config.docker_network_name)
             network.connect(self.container)
 
             self._wait_for_container()
-            print(f"Container '{name}' created successfully!")
             return self.container
             
         except Exception as e:
-            print(f"Failed to create container: {e}")
             raise RuntimeError(f"Failed to create container: {str(e)}")
 
     def stop_container(self):
@@ -61,7 +61,6 @@ class DockerManager:
             try:
                 self.container.stop()
                 self.container.remove()
-                print(f"Stopped container {self.container.id[:12]}")
             except Exception as e:
                 print(f"Error stopping container: {e}")
             finally:
@@ -78,6 +77,7 @@ class DockerManager:
     def exec_command(self, command: str="", retries=1, workdir: str="/project", run_in_background: bool=False):
         if not self.container:
             raise RuntimeError("Container not initialized. Cannot execute command.")        
+        
         if run_in_background:
             try:
                 exec_result = self.container.exec_run(
@@ -85,11 +85,9 @@ class DockerManager:
                     workdir=workdir,
                     detach=run_in_background  
                 )
-                print(f"Command started in background: {command}")
                 return f"Background execution started for: {command}"
             except Exception as e:
                 error_msg = f"Background execution error: {str(e)}"
-                print(error_msg)
                 raise RuntimeError(error_msg)
         
         for attempt in range(retries):
@@ -98,15 +96,17 @@ class DockerManager:
                     cmd=(command.split() if isinstance(command, str) else command),
                     workdir=workdir,
                 )
+                
+                output_str = output.decode('utf-8')
+                
                 if exit_code == 0:
-                    return output.decode('utf-8')
-                error_msg = f"Command failed (attempt {attempt+1}/{retries}): {output.decode('utf-8')}"
-                print(error_msg)
+                    return output_str
+                
+                error_msg = f"Command failed (attempt {attempt+1}/{retries}): {output_str}"
                 if attempt == retries - 1:
                     raise RuntimeError(error_msg)
             except Exception as e:
-                error_msg = f"Execution error: {str(e)}"
-                print(error_msg)
+                error_msg = f"Execution error: {str(e)}"    
                 if attempt == retries - 1:  
                     raise RuntimeError(error_msg)
             time.sleep(2)
