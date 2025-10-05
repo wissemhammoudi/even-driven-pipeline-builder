@@ -136,7 +136,7 @@ services:
       - "8088:8088"
     environment:
       SUPERSET_ENV: production
-      SUPERSET_DATABASE_URI: postgresql+psycopg2://user:password@postgres:5432/mydatabase?options=-csearch_path%3Dsuperset_schema
+      SUPERSET_DATABASE_URI: postgresql+psycopg2://user:password@postgres:5432/mydatabase
       SUPERSET_SECRET_KEY: "aZ1x9vqfK2w+G+dwiXm16BnyhsJXgsmwuIiLNqKDRI/8x7axAscKc7Dg"
       ADMIN_USERNAME: admin
       ADMIN_PASSWORD: admin123

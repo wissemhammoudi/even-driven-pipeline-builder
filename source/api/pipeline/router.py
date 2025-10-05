@@ -11,6 +11,8 @@ from source.service.PipelineManager.sourceTablesMetadata import PostgreSQLSource
 from source.service.user.services import UserService
 from source.schema.user.schemas import UserRole     
 from source.service.authentication.keycloak_auth import require_user_role, require_admin_role
+from source.service.event_driven.cdc_service import CDCService 
+
 pipeline_router = APIRouter(prefix=f"{api_config.api_prefix}/pipeline")
 
 @pipeline_router.post("/test-connection")
@@ -125,6 +127,7 @@ def create_pipeline(
     pipeline_data: PipelineCreate, 
     pipeline_service: PipelineService = Depends(PipelineService),
     user_service: UserService = Depends(UserService),
+    cdc_service: CDCService = Depends(CDCService),
     current_user: dict = Depends(require_admin_role)
 ):
     try:
@@ -144,6 +147,31 @@ def create_pipeline(
 
         response, status_code = pipeline_service.create_pipeline(pipeline_data)
         if status_code == 201:
+            try:
+                pipeline_id = response.get("pipeline_id")
+                if pipeline_id:
+                    # Initialize CDC service if not already initialized
+                    import asyncio
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    try:
+                        init_result = loop.run_until_complete(cdc_service.initialize())
+                        if init_result:
+                            # Start schema monitoring using CDC service with Debezium
+                            schema_result = loop.run_until_complete(
+                                cdc_service.start_schema_monitoring(pipeline_id, pipeline_data.created_by)
+                            )
+                            if "error" in schema_result:
+                                print(f"Warning: Failed to start schema monitoring for pipeline {pipeline_id}: {schema_result['error']}")
+                            else:
+                                print(f"Schema monitoring started successfully for pipeline {pipeline_id}")
+                        else:
+                            print(f"Warning: Failed to initialize CDC service for pipeline {pipeline_id}")
+                    finally:
+                        loop.close()
+            except Exception as e:
+                print(f"Warning: Failed to start schema monitoring for pipeline {pipeline_id}: {e}")
+            
             return response
         else:
             raise HTTPException(
@@ -176,9 +204,29 @@ def create_pipeline(
 def delete_pipeline(
     pipeline_id: int, 
     PipelineService: PipelineService = Depends(PipelineService),
+    cdc_service: CDCService = Depends(CDCService),
     current_user: dict = Depends(require_admin_role)
 ):
     try:
+        try:
+            # Stop schema monitoring using CDC service
+            import asyncio
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                init_result = loop.run_until_complete(cdc_service.initialize())
+                if init_result:
+                    stop_result = loop.run_until_complete(cdc_service.stop_schema_monitoring(pipeline_id))
+                    if "error" in stop_result:
+                        print(f"Warning: Failed to stop schema monitoring for pipeline {pipeline_id}: {stop_result['error']}")
+                    else:
+                        print(f"Schema monitoring stopped successfully for pipeline {pipeline_id}")
+                else:
+                    print(f"Warning: Failed to initialize CDC service for pipeline {pipeline_id}")
+            finally:
+                loop.close()
+        except Exception as e:
+            print(f"Warning: Failed to stop schema monitoring for pipeline {pipeline_id}: {e}")
         PipelineService.delete_pipeline(PipelineDelete(pipeline_id=pipeline_id))
         return {"message": "Pipeline soft-deleted successfully."}
     except PipelineNotFoundError as e:

@@ -15,6 +15,10 @@ from source.api.dashboard.router import dashboard_router
 from source.api.pipeline_dashboard.router import pipeline_dashboard_router
 from source.service.keycloak_service import get_keycloak_service    
 from source.service.PipelineManager.transfomrationManager.n8n_manager import N8NManager
+from source.api.change_detection.router import schema_change_detection_router
+from source.service.change_detection.service import ChangeDetectionService
+from fastapi import Query
+from typing import Optional
 
 
 app = FastAPI(
@@ -45,6 +49,12 @@ app.include_router(router_transformation, tags=["transformation"])
 app.include_router(user_pipeline_access_router, tags=["User Pipeline Access"])
 app.include_router(dashboard_router, tags=["Dashboard"])
 app.include_router(pipeline_dashboard_router, tags=["Pipeline Dashboard"])
+<<<<<<< Updated upstream
+=======
+app.include_router(cdc_router, tags=["CDC"])
+app.include_router(schema_change_detection_router, tags=["Schema Change Detection"])
+
+>>>>>>> Stashed changes
 Base.metadata.create_all(bind=engine)
 
 
@@ -107,7 +117,6 @@ async def startup_event():
         print(f"❌ N8N initialization failed: {str(e)}")
         import traceback
         traceback.print_exc()
-    
     print("🎉 Application startup completed!")
 
 @app.get("/")

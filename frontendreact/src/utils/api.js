@@ -168,8 +168,39 @@ export const supersetAPI = {
 }
 
 export const schemaChangeAPI = {
+<<<<<<< Updated upstream
   getSchemaChanges: (pipelineId) => api.get(`/change-detection/schema-changes/pipeline/${pipelineId}`),
   getBreakingChanges: (pipelineId) => api.get(`/change-detection/schema-changes/pipeline/${pipelineId}/breaking`)
+=======
+  getSchemaChanges: (pipelineId) => api.get(`/change-detection/schema-changes/detect`, { params: { pipeline_id: pipelineId } }),
+  getBreakingChanges: (pipelineId) => api.get(`/change-detection/schema-changes/detect`, { params: { pipeline_id: pipelineId } })
+}
+
+export const cdcAPI = {
+  startSchemaMonitoring: (pipelineId) => {
+    const numericId = Number(pipelineId)
+    if (!Number.isInteger(numericId)) {
+      return Promise.reject(new Error('Invalid pipeline id: must be an integer'))
+    }
+    return api.post(`/api/v1/cdc/pipeline/${numericId}/schema-monitoring/start`)
+  },
+  stopSchemaMonitoring: (pipelineId) => {
+    const numericId = Number(pipelineId)
+    if (!Number.isInteger(numericId)) {
+      return Promise.reject(new Error('Invalid pipeline id: must be an integer'))
+    }
+    return api.post(`/api/v1/cdc/pipeline/${numericId}/schema-monitoring/stop`)
+  },
+  getSchemaMonitoringStatus: (pipelineId) => {
+    const numericId = Number(pipelineId)
+    if (!Number.isInteger(numericId)) {
+      return Promise.reject(new Error('Invalid pipeline id: must be an integer'))
+    }
+    return api.get(`/api/v1/cdc/pipeline/${numericId}/schema-monitoring/status`)
+  },
+  listKafkaTopics: () => api.get('/api/v1/cdc/kafka/topics'),
+  getKafkaTopicInfo: (topicName) => api.get(`/api/v1/cdc/kafka/topics/${encodeURIComponent(topicName)}`)
+>>>>>>> Stashed changes
 }
 
 export const pipelineStepAPI = {

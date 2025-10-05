@@ -27,20 +27,20 @@ const AccessRow = ({
 
   const getAccessIcon = (grantType) => {
     switch (grantType) {
-      case 'EDIT':
-        return <PencilIcon className='h-4 w-4' />
-      case 'ADMIN':
+      case 'VIEW':
+        return <EyeIcon className='h-4 w-4' />
+      case 'OWNER':
         return <ShieldCheckIcon className='h-4 w-4' />
       default:
-        return <PencilIcon className='h-4 w-4' />
+        return <EyeIcon className='h-4 w-4' />
     }
   }
 
   const getAccessColor = (grantType) => {
     switch (grantType) {
-      case 'EDIT':
+      case 'VIEW':
         return 'bg-green-100 text-green-800'
-      case 'ADMIN':
+      case 'OWNER':
         return 'bg-purple-100 text-purple-800'
       default:
         return 'bg-gray-100 text-gray-800'
@@ -78,8 +78,8 @@ const AccessRow = ({
             onChange={(e) => setEditGrantType(e.target.value)}
             className='block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm'
           >
-            <option value='EDIT'>Edit</option>
-            <option value='ADMIN'>Admin</option>
+            <option value='VIEW'>View</option>
+            <option value='OWNER'>Owner</option>
           </select>
         ) : (
           <span

@@ -1,6 +1,6 @@
 import os
 
-SQLALCHEMY_DATABASE_URI = os.environ.get("SQLALCHEMY_DATABASE_URI", "postgresql://user:password@postgres:5432/postgres")
+SQLALCHEMY_DATABASE_URI = os.environ.get("SUPERSET_DATABASE_URI", os.environ.get("SQLALCHEMY_DATABASE_URI", "postgresql://user:password@postgres:5432/postgres"))
 SECRET_KEY = os.environ.get("SECRET_KEY", "aZ1x9vqfK2w+G+dwiXm16BnyhsJXgsmwuIiLNqKDRI/8x7axAscKc7Dg")
 SESSION_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_HTTPONLY = True
@@ -26,3 +26,15 @@ CORS_OPTIONS = {
     'origins': cors_origins,
     'methods': ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 }
+
+# Disable problematic database dialects to prevent warnings
+DISABLED_DB_DIALECTS = [
+    'superset',
+    'gsheets', 
+    'shillelagh',
+    'shillelagh.apsw',
+    'shillelagh.safe',
+    'hive',
+    'hive.http',
+    'hive.https'
+]

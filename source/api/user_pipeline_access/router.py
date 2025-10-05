@@ -1,4 +1,4 @@
-from fastapi import APIRouter, status, HTTPException, Depends
+from fastapi import APIRouter, status, HTTPException, Depends, Query
 from typing import List
 from source.schema.user_pipeline_access.schema import (
     UserPipelineAccessUpdate, 
@@ -18,7 +18,7 @@ user_pipeline_access_router = APIRouter(
 @user_pipeline_access_router.put("/update", response_model=UserPipelineAccessResponse)
 def update_access(
     access_data: UserPipelineAccessUpdate,
-    user_id: str, 
+    user_id: str = Query(..., description="User ID to update access for"),
     access_service: UserPipelineAccessService = Depends(UserPipelineAccessService),
     current_user: dict = Depends(require_user_role)
 ):
@@ -44,7 +44,7 @@ def update_access(
 @user_pipeline_access_router.post("/bulk-grant", response_model=List[UserPipelineAccessResponse])
 def bulk_grant_access(
     bulk_data: BulkAccessGrant,
-    user_id: str, 
+    user_id: str = Query(..., description="User ID to grant access to"),
     access_service: UserPipelineAccessService = Depends(UserPipelineAccessService),
     current_user: dict = Depends(require_user_role)
 ):
@@ -71,7 +71,7 @@ def bulk_grant_access(
 @user_pipeline_access_router.post("/bulk-revoke", response_model=BulkOperationResult)
 def bulk_revoke_access(
     bulk_data: BulkAccessRevoke,
-    user_id: str,  
+    user_id: str = Query(..., description="User ID to revoke access for"),
     access_service: UserPipelineAccessService = Depends(UserPipelineAccessService),
     current_user: dict = Depends(require_user_role)
 ):
@@ -91,7 +91,7 @@ def bulk_revoke_access(
 @user_pipeline_access_router.get("/pipeline/{pipeline_id}/users")
 def get_users_for_pipeline(
     pipeline_id: int,
-    user_id: str,  
+    user_id: str = Query(..., description="User ID requesting the information"),
     access_service: UserPipelineAccessService = Depends(UserPipelineAccessService),
     current_user: dict = Depends(require_user_role)
 ):
@@ -122,7 +122,7 @@ def get_users_for_pipeline(
 @user_pipeline_access_router.get("/pipeline/{pipeline_id}/permissions/{user_id}")
 def get_user_permissions(
     pipeline_id: int,
-    user_id: str,  
+    user_id: str,
     access_service: UserPipelineAccessService = Depends(UserPipelineAccessService),
     current_user: dict = Depends(require_user_role)
 ):

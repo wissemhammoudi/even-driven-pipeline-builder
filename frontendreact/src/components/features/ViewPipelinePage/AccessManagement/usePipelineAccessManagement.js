@@ -58,9 +58,9 @@ export function usePipelineAccessManagement(pipelineId, currentUserId) {
     setIsBulkGranting(true)
     const requestData = {
       pipeline_id: parseInt(pipelineId),
-      user_ids: selectedUsers.map(id => parseInt(id)),
+      user_ids: selectedUsers,
       grant_type: bulkGrantType,
-      granted_by: parseInt(currentUserId)
+      granted_by: currentUserId
     }
     try {
       await userPipelineAccessAPI.bulkGrantAccess(requestData, currentUserId)
@@ -89,8 +89,7 @@ export function usePipelineAccessManagement(pipelineId, currentUserId) {
     try {
       const requestData = {
         pipeline_id: parseInt(pipelineId),
-        user_ids: [parseInt(pendingRevokeUserId)],
-        granted_by: parseInt(currentUserId)
+        user_ids: [pendingRevokeUserId]
       }
       await userPipelineAccessAPI.bulkRevokeAccess(requestData, currentUserId)
       toast.success('Access revoked successfully')

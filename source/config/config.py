@@ -51,9 +51,9 @@ class KeycloakConfig(BaseSettings):
         return self.keycloak_realm
 
 class GitHubConfig(BaseSettings):
-    github_token: str = Field(env="github_token", default="token")
-    github_username: str = Field(env="github_username", default="wissemHammoudi1")
-    github_email: str = Field(env='github_email', default="wissem.hammoudi@elyadata.com")
+    github_token: str = Field(env="github_token", default="gtest")
+    github_username: str = Field(env="github_username", default="wissemhammoudi")
+    github_email: str = Field(env='github_email', default="hammoudiwissem81@gmail.com")
 
 class DockerConfig(BaseSettings):
     meltano_docker_image: str = Field(env="meltano_docker_image", default="wissem020/meltano")
@@ -106,7 +106,42 @@ class ApplicationUserInitConfig(BaseSettings):
 
 class ExternalServicesConfig(BaseSettings):
     n8n_webhook_Url: str = Field(env="n8n_webhook_Url", default="http://n8n:5678/webhook/sql-transformation")
-    
+    kafka_bootstrap_servers: str = Field(env="KAFKA_BOOTSTRAP_SERVERS", default="kafka:9092")
+    debezium_url: str = Field(env="DEBEZIUM_URL", default="http://debezium:8083")
+    redis_host: str = Field(env="REDIS_HOST", default="redis")
+    redis_port: int = Field(env="REDIS_PORT", default=6379)
+
+class DebeziumConfig(BaseSettings):
+    debezium_url: str = Field(env="DEBEZIUM_URL", default="http://debezium:8083")
+    debezium_connector_name: str = Field(env="DEBEZIUM_CONNECTOR_NAME", default="postgres-connector")
+    debezium_database_hostname: str = Field(env="DEBEZIUM_DB_HOSTNAME", default="postgres_source")
+    debezium_database_port: int = Field(env="DEBEZIUM_DB_PORT", default=5432)
+    debezium_database_user: str = Field(env="DEBEZIUM_DB_USER", default="user")
+    debezium_database_password: str = Field(env="DEBEZIUM_DB_PASSWORD", default="password")
+    debezium_database_dbname: str = Field(env="DEBEZIUM_DB_NAME", default="mydatabase")
+    debezium_database_server_name: str = Field(env="DEBEZIUM_SERVER_NAME", default="postgres_source")
+    debezium_topic_prefix: str = Field(env="DEBEZIUM_TOPIC_PREFIX", default="postgres_source")
+    debezium_schema_include_list: str = Field(env="DEBEZIUM_SCHEMA_INCLUDE_LIST", default="public")
+    debezium_table_include_list: str = Field(env="DEBEZIUM_TABLE_INCLUDE_LIST", default="public.*")
+
+class KafkaConfig(BaseSettings):
+    kafka_bootstrap_servers: str = Field(env="KAFKA_BOOTSTRAP_SERVERS", default="kafka:9092")
+    kafka_consumer_group_id: str = Field(env="KAFKA_CONSUMER_GROUP_ID", default="schema-change-detector")
+    kafka_auto_offset_reset: str = Field(env="KAFKA_AUTO_OFFSET_RESET", default="earliest")
+    kafka_enable_auto_commit: bool = Field(env="KAFKA_ENABLE_AUTO_COMMIT", default=True)
+
+class RedisConfig(BaseSettings):
+    redis_host: str = Field(env="REDIS_HOST", default="redis")
+    redis_port: int = Field(env="REDIS_PORT", default=6379)
+    redis_db: int = Field(env="REDIS_DB", default=0)
+    redis_password: str = Field(env="REDIS_PASSWORD", default="")
+    redis_decode_responses: bool = Field(env="REDIS_DECODE_RESPONSES", default=True)
+
+class TriggerConditionsConfig(BaseSettings):
+    default_threshold_value: int = Field(env="DEFAULT_THRESHOLD_VALUE", default=3)
+    cooldown_period: int = Field(env="COOLDOWN_PERIOD", default=60)  # in seconds
+
+>>>>>>> Stashed changes
 application_user_init_config = ApplicationUserInitConfig()
 external_services_config = ExternalServicesConfig()
 api_config = APIConfig()
@@ -117,3 +152,7 @@ github_config = GitHubConfig()
 docker_config = DockerConfig()
 keycloak_config = KeycloakConfig()
 user_config = ApplicationUserInitConfig()  
+debezium_config = DebeziumConfig()
+kafka_config = KafkaConfig()
+redis_config = RedisConfig()
+trigger_conditions_config = TriggerConditionsConfig()
